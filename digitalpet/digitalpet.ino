@@ -227,7 +227,7 @@ void processTouch() {
             if (tdisp.in_stat) {
               tdisp.sel_stat--;
               if(tdisp.sel_stat < 0) {
-                tdisp.sel_stat = 3;
+                tdisp.sel_stat = 4;
               }
               libpet_display(false);
               gfx_render();
@@ -274,7 +274,7 @@ void processTouch() {
             btn_tstate[i] = 0; // Held
             if (tdisp.in_stat) {
               tdisp.sel_stat++;
-              if(tdisp.sel_stat > 3) {
+              if(tdisp.sel_stat > 4) {
                 tdisp.sel_stat = 0;
               }
               libpet_display(false);
@@ -774,27 +774,7 @@ void drawDisplay(int id) {
       }
       p = map(pet.hunger, 0, HUNGER_DEATH, 0, 27) & 0x1F;
       break;
-    case DISPLAY_ENERGY: // Display RPG
-      loadGlyph35('R', 10, 2);
-      loadGlyph35('P', 14, 2);
-      loadGlyph35('G', 18, 2);
-      
-      loadGlyph35('C', 0,  10);
-      loadGlyph35('O', 4,  10);
-      loadGlyph35('I', 8,  10);
-      loadGlyph35('N', 12, 10);
-      itoa(pet.rpg.coins, snum, 10); // int to base 10 string
-
-      // count digits
-      for (x = 0; x < 5; x++) {
-        if(snum[x] == 0x00)
-          break;
-      }
-      for (i = 0; i < x; i++) {
-        loadGlyph35(snum[i], ((5 - x) * 4) + (i * 4) + 13, 10);
-      }
-      break;
-    case DISPLAY_ENERGY+22: // Display Energy
+    case DISPLAY_ENERGY: // Display Energy
       for (yy = 0; yy < ifo_Energy[1]; yy++) {
         for (xx = 0; xx < ifo_Energy[0]; xx++) {
           px = calculateXByte(xx);
@@ -829,8 +809,28 @@ void drawDisplay(int id) {
         p = map(pet.age, AGE_MATURE, AGE_DEATH, 0, 27);
       }
       break;
+    case DISPLAY_RPG: // Display RPG
+      loadGlyph35('R', 10, 2);
+      loadGlyph35('P', 14, 2);
+      loadGlyph35('G', 18, 2);
+      
+      loadGlyph35('C', 0,  10);
+      loadGlyph35('O', 4,  10);
+      loadGlyph35('I', 8,  10);
+      loadGlyph35('N', 12, 10);
+      itoa(pet.rpg.coins, snum, 10); // int to base 10 string
+
+      // count digits
+      for (x = 0; x < 5; x++) {
+        if(snum[x] == 0x00)
+          break;
+      }
+      for (i = 0; i < x; i++) {
+        loadGlyph35(snum[i], ((5 - x) * 4) + (i * 4) + 13, 10);
+      }
+      break;
   }
-  if (id != DISPLAY_ENERGY) {
+  if (id != DISPLAY_RPG) {
     // Draw progress bar
     linePixels( 3, 11, 28, 11, 1); // top
     linePixels( 3, 17, 28, 17, 1); // bottom
@@ -1249,7 +1249,8 @@ void gotCoins(int count) {
   // Serial.print("Coins: ");
   // Serial.println(count);
   pet.rpg.coins += count;
-  doRandTransition(0, 64, true); // fast Fadeout with fill
+  doShiftTransition(random(0, 2));
+  //doRandTransition(0, 64, true); // fast Fadeout with fill
   
   loadGlyph35('C', 6, 0);
   loadGlyph35('o', 10, 0);
@@ -1313,6 +1314,7 @@ void gotLevel(int level) {
   delay(5000);
   doRandTransition(1, 64, false); // Fast fade-in without fill
 }
+
 void doShiftTransition(bool lr) {
   uint8_t i;
   for (i = 0; i < 32; i++) {

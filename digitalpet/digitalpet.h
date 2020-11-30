@@ -68,6 +68,7 @@
 #define DISPLAY_ENERGY 1
 #define DISPLAY_WASTE  2
 #define DISPLAY_AGE    3
+#define DISPLAY_RPG    4
 
 #if defined(__SAM3X8E__)
     #undef __FlashStringHelper::F(string_literal)
