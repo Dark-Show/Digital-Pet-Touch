@@ -20,9 +20,10 @@
     #define F(string_literal) string_literal
 #endif
 
-
-
+#ifdef KEYESTUDIO28LCD
 // Keyestudio 2.8" LCD Shield Hardware
+#include <TouchScreen.h> // Adafruit touchscreen
+#include "TFTLCD_ILI932x.h" // Cutdown Adafruit library
 #define LCD_CS      A3 // Pin Chip Select (Shared with Touch)
 #define LCD_CD      A2 // Command/Data (Shared with Touch)
 #define LCD_WR      A1 // LCD Write
@@ -41,6 +42,35 @@
 #define TS_MAXY    960 // Touch Max Y Position
 #define TS_DEBO     50 // Touch controls debounce (Noisy touch?)
 
+TFTLCD_ILI932x tft(LCD_CS, LCD_CD, LCD_WR, LCD_RD, LCD_RESET);
+#endif
+
+// Timing Settings
+#define T_TICK  16   // Loops of game code per second
+#define T_FPS   2       // Frames per second
+
+// Gameplay Settings
+#define AGE_MOVE        64
+#define AGE_HATCH      128
+#define AGE_MATURE     796
+#define AGE_DEATH     8192
+
+#define ENABLE_EAT      32
+#define HUNGER_WARNING 128
+#define HUNGER_SICK    256
+#define HUNGER_DEATH   512
+
+#define ENABLE_SLEEP   150
+#define ENERGY_WARNING  64
+#define FORCE_SLEEP      8
+
+#define ENABLE_CLEAN    32
+#define WASTE_SICK     256
+
+#define EXPLORE_HIDE    32
+// 16 (low chance of level 2 reach
+// 32 (low chance of level 6 reach
+
 // Matrix Screen Adjustments
 #define T_SELS  0.12 // Multiplier (12% of screen)
 #define T_SELP  2    // Selector padding (Pixels)
@@ -54,12 +84,14 @@
 #define IDLE_MATURE     2
 #define SLEEP_BABY      3
 #define SLEEP_MATURE    4
+// Overlay IDs
 #define OVERLAY_CLEAN   5
 #define OVERLAY_EXLAIM  6
 #define OVERLAY_ZZZ     7
 #define OVERLAY_DEAD    8
 #define OVERLAY_EAT     9
 #define OVERLAY_STINK  10
+// Display IDs
 #define DISPLAY_HUNGER 0
 #define DISPLAY_ENERGY 1
 #define DISPLAY_WASTE  2
@@ -74,6 +106,16 @@ struct tama_state {
   bool clean;
 };
 
+struct tama_rpg {
+   int8_t attack;
+   int8_t defense;
+   int8_t magic;
+   int8_t luck;
+   uint8_t experience;
+   uint8_t level;
+   uint32_t coins;
+};
+
 struct tama_pet {
    uint16_t hunger;
    uint16_t energy;
@@ -82,6 +124,7 @@ struct tama_pet {
    uint16_t age;
    uint8_t  stage;
    struct   tama_state state;
+   struct   tama_rpg rpg;
 };
 
 struct tama_display {
@@ -98,7 +141,6 @@ struct tama_display {
 struct tama_pet pet;
 struct tama_display tdisp;
 
-Adafruit_TFTLCD tft(LCD_CS, LCD_CD, LCD_WR, LCD_RD, LCD_RESET);
 TouchScreen touch = TouchScreen(TOUCH_XP, TOUCH_YP, TOUCH_XM, TOUCH_YM, TOUCH_OHM);
 
 // Debounce Variables
@@ -116,110 +158,11 @@ long lastFrame = 0;
 
 uint8_t disp[32][4];   // Active pixels
 uint8_t pixbuf[32][4]; // Pixel buffer
+uint8_t explorer_high = 0;
 
-int gfx_frames[16] = {2, 2, 2, 2, 2, 1, 2, 2, 2, 5, 2, 1, 1, 1, 1, 1};
+int gfx_frames[16] = {2, 2, 2, 2, 2, 1, 2, 2, 2, 5, 2, 1, 1, 1, 1};
 
 // Bits(right to left)
-
-const uint8_t gfx_overlayClean[1][32][4] PROGMEM = {{{0x02, 0x00, 0x00, 0x00}, // Frame 1
-                                                     {0x02, 0x00, 0x00, 0x00},
-                                                     {0x02, 0x00, 0x00, 0x00},
-                                                     {0x02, 0x00, 0x00, 0x00},
-                                                     {0x02, 0x00, 0x00, 0x00},
-                                                     {0x02, 0x00, 0x00, 0x00},
-                                                     {0x02, 0x00, 0x00, 0x00},
-                                                     {0x02, 0x00, 0x00, 0x00},
-                                                     {0x02, 0x00, 0x00, 0x00},
-                                                     {0x02, 0x00, 0x00, 0x00},
-                                                     {0x02, 0x00, 0x00, 0x00},
-                                                     {0x02, 0x00, 0x00, 0x00},
-                                                     {0x02, 0x00, 0x00, 0x00},
-                                                     {0x02, 0x00, 0x00, 0x00},
-                                                     {0x02, 0x00, 0x00, 0x00},
-                                                     {0x02, 0x00, 0x00, 0x00},
-                                                     {0x02, 0x00, 0x00, 0x00},
-                                                     {0x02, 0x00, 0x00, 0x00},
-                                                     {0x02, 0x00, 0x00, 0x00},
-                                                     {0x02, 0x00, 0x00, 0x00},
-                                                     {0x02, 0x00, 0x00, 0x00},
-                                                     {0x02, 0x00, 0x00, 0x00},
-                                                     {0x02, 0x00, 0x00, 0x00},
-                                                     {0x02, 0x00, 0x00, 0x00},
-                                                     {0x02, 0x00, 0x00, 0x00},
-                                                     {0x02, 0x00, 0x00, 0x00},
-                                                     {0x02, 0x00, 0x00, 0x00},
-                                                     {0x02, 0x00, 0x00, 0x00},
-                                                     {0x02, 0x00, 0x00, 0x00},
-                                                     {0x02, 0x00, 0x00, 0x00},
-                                                     {0x02, 0x00, 0x00, 0x00},
-                                                     {0x02, 0x00, 0x00, 0x00}}};
-
-const uint8_t gfx_overlayExlaim[2][32][4] PROGMEM = {{{0x00, 0x00, 0x00, 0x00}, // Frame 1
-                                                      {0x20, 0x00, 0x00, 0x00}, // 0x20
-                                                      {0x70, 0x00, 0x00, 0x00}, // 0x70
-                                                      {0x70, 0x00, 0x00, 0x00}, // 0x70
-                                                      {0x70, 0x00, 0x00, 0x00}, // 0x70
-                                                      {0x70, 0x00, 0x00, 0x00}, // 0x70
-                                                      {0x70, 0x00, 0x00, 0x00}, // 0x70
-                                                      {0x70, 0x00, 0x00, 0x00}, // 0x70
-                                                      {0x70, 0x00, 0x00, 0x00}, // 0x70
-                                                      {0x20, 0x00, 0x00, 0x00}, // 0x20
-                                                      {0x00, 0x00, 0x00, 0x00}, // 0x00
-                                                      {0x20, 0x00, 0x00, 0x00}, // 0x20
-                                                      {0x70, 0x00, 0x00, 0x00}, // 0x70
-                                                      {0x20, 0x00, 0x00, 0x00}, // 0x20
-                                                      {0x00, 0x00, 0x00, 0x00},
-                                                      {0x00, 0x00, 0x00, 0x00},
-                                                      {0x00, 0x00, 0x00, 0x00},
-                                                      {0x00, 0x00, 0x00, 0x00},
-                                                      {0x00, 0x00, 0x00, 0x00},
-                                                      {0x00, 0x00, 0x00, 0x00},
-                                                      {0x00, 0x00, 0x00, 0x00},
-                                                      {0x00, 0x00, 0x00, 0x00},
-                                                      {0x00, 0x00, 0x00, 0x00},
-                                                      {0x00, 0x00, 0x00, 0x00},
-                                                      {0x00, 0x00, 0x00, 0x00},
-                                                      {0x00, 0x00, 0x00, 0x00},
-                                                      {0x00, 0x00, 0x00, 0x00},
-                                                      {0x00, 0x00, 0x00, 0x00},
-                                                      {0x00, 0x00, 0x00, 0x00},
-                                                      {0x00, 0x00, 0x00, 0x00},
-                                                      {0x00, 0x00, 0x00, 0x00},
-                                                      {0x00, 0x00, 0x00, 0x00}},
-                                   
-                                                     {{0x00, 0x00, 0x00, 0x00}, // Frame 2
-                                                      {0x00, 0x00, 0x00, 0x00},
-                                                      {0x00, 0x00, 0x00, 0x00},
-                                                      {0x00, 0x00, 0x00, 0x00},
-                                                      {0x00, 0x00, 0x00, 0x00},
-                                                      {0x00, 0x00, 0x00, 0x00},
-                                                      {0x00, 0x00, 0x00, 0x00},
-                                                      {0x00, 0x00, 0x00, 0x00},
-                                                      {0x00, 0x00, 0x00, 0x00},
-                                                      {0x00, 0x00, 0x00, 0x00},
-                                                      {0x00, 0x00, 0x00, 0x00},
-                                                      {0x00, 0x00, 0x00, 0x00},
-                                                      {0x00, 0x00, 0x00, 0x00},
-                                                      {0x00, 0x00, 0x00, 0x00},
-                                                      {0x00, 0x00, 0x00, 0x00},
-                                                      {0x00, 0x00, 0x00, 0x00},
-                                                      {0x00, 0x00, 0x00, 0x00},
-                                                      {0x00, 0x00, 0x00, 0x00},
-                                                      {0x00, 0x00, 0x00, 0x00},
-                                                      {0x00, 0x00, 0x00, 0x00},
-                                                      {0x00, 0x00, 0x00, 0x00},
-                                                      {0x00, 0x00, 0x00, 0x00},
-                                                      {0x00, 0x00, 0x00, 0x00},
-                                                      {0x00, 0x00, 0x00, 0x00},
-                                                      {0x00, 0x00, 0x00, 0x00},
-                                                      {0x00, 0x00, 0x00, 0x00},
-                                                      {0x00, 0x00, 0x00, 0x00},
-                                                      {0x00, 0x00, 0x00, 0x00},
-                                                      {0x00, 0x00, 0x00, 0x00},
-                                                      {0x00, 0x00, 0x00, 0x00},
-                                                      {0x00, 0x00, 0x00, 0x00},
-                                                      {0x00, 0x00, 0x00, 0x00}}};
-
 const uint8_t gfx_overlayZzz[2][32][4] PROGMEM = {{{0x00, 0x00, 0x00, 0x00}, // Frame 1
                                                    {0x00, 0x00, 0x00, 0x00},
                                                    {0x00, 0x00, 0x00, 0x00},
@@ -285,72 +228,6 @@ const uint8_t gfx_overlayZzz[2][32][4] PROGMEM = {{{0x00, 0x00, 0x00, 0x00}, // 
                                                    {0x00, 0x00, 0x00, 0x00},
                                                    {0x00, 0x00, 0x00, 0x00},
                                                    {0x00, 0x00, 0x00, 0x00}}};
-
-const uint8_t gfx_overlayDead[2][32][4] PROGMEM = {{{0x00, 0x00, 0x00, 0x00}, // Frame 1
-                                                    {0x00, 0x00, 0x00, 0x00},
-                                                    {0x00, 0x00, 0xc0, 0x0f}, // 0xfc00000
-                                                    {0x00, 0x00, 0xe0, 0x1f}, // 0x1fe00000
-                                                    {0x00, 0x00, 0x60, 0x1b}, // 0x1b600000
-                                                    {0x00, 0x00, 0xe0, 0x1f}, // 0x1fe00000
-                                                    {0x00, 0x00, 0xc0, 0x0f}, // 0xfc00000
-                                                    {0x00, 0x00, 0xc0, 0x0f}, // 0xfc00000
-                                                    {0x00, 0x00, 0x40, 0x05}, // 0x5400000
-                                                    {0x00, 0x00, 0x00, 0x00},
-                                                    {0x00, 0x00, 0x00, 0x00},
-                                                    {0x00, 0x00, 0x00, 0x00},
-                                                    {0x00, 0x00, 0x00, 0x00},
-                                                    {0x00, 0x00, 0x00, 0x00},
-                                                    {0x00, 0x00, 0x00, 0x00},
-                                                    {0x00, 0x00, 0x00, 0x00},
-                                                    {0x00, 0x00, 0x00, 0x00},
-                                                    {0x00, 0x00, 0x00, 0x00},
-                                                    {0x00, 0x00, 0x00, 0x00},
-                                                    {0x00, 0x00, 0x00, 0x00},
-                                                    {0x00, 0x00, 0x00, 0x00},
-                                                    {0x00, 0x00, 0x00, 0x00},
-                                                    {0x00, 0x00, 0x00, 0x00},
-                                                    {0x00, 0x00, 0x00, 0x00},
-                                                    {0x00, 0x00, 0x00, 0x00},
-                                                    {0x00, 0x00, 0x00, 0x00},
-                                                    {0x00, 0x00, 0x00, 0x00},
-                                                    {0x00, 0x00, 0x00, 0x00},
-                                                    {0x00, 0x00, 0x00, 0x00},
-                                                    {0x00, 0x00, 0x00, 0x00},
-                                                    {0x00, 0x00, 0x00, 0x00},
-                                                    {0x00, 0x00, 0x00, 0x00}},
-                                   
-                                                   {{0x00, 0x00, 0x00, 0x00}, // Frame 2
-                                                    {0x00, 0x00, 0x00, 0x00},
-                                                    {0x00, 0x00, 0xe0, 0x07}, // 0x7e00000
-                                                    {0x00, 0x00, 0xf0, 0x0f}, // 0xff00000
-                                                    {0x00, 0x00, 0xb0, 0x0d}, // 0xdb00000
-                                                    {0x00, 0x00, 0xf0, 0x0f}, // 0xff00000
-                                                    {0x00, 0x00, 0xe0, 0x07}, // 0x7e00000
-                                                    {0x00, 0x00, 0xe0, 0x07}, // 0x7e00000
-                                                    {0x00, 0x00, 0xa0, 0x02}, // 0x2a00000
-                                                    {0x00, 0x00, 0x00, 0x00},
-                                                    {0x00, 0x00, 0x00, 0x00},
-                                                    {0x00, 0x00, 0x00, 0x00},
-                                                    {0x00, 0x00, 0x00, 0x00},
-                                                    {0x00, 0x00, 0x00, 0x00},
-                                                    {0x00, 0x00, 0x00, 0x00},
-                                                    {0x00, 0x00, 0x00, 0x00},
-                                                    {0x00, 0x00, 0x00, 0x00},
-                                                    {0x00, 0x00, 0x00, 0x00},
-                                                    {0x00, 0x00, 0x00, 0x00},
-                                                    {0x00, 0x00, 0x00, 0x00},
-                                                    {0x00, 0x00, 0x00, 0x00},
-                                                    {0x00, 0x00, 0x00, 0x00},
-                                                    {0x00, 0x00, 0x00, 0x00},
-                                                    {0x00, 0x00, 0x00, 0x00},
-                                                    {0x00, 0x00, 0x00, 0x00},
-                                                    {0x00, 0x00, 0x00, 0x00},
-                                                    {0x00, 0x00, 0x00, 0x00},
-                                                    {0x00, 0x00, 0x00, 0x00},
-                                                    {0x00, 0x00, 0x00, 0x00},
-                                                    {0x00, 0x00, 0x00, 0x00},
-                                                    {0x00, 0x00, 0x00, 0x00},
-                                                    {0x00, 0x00, 0x00, 0x00}}};
 
 const uint8_t gfx_overlayEat[5][32][4] PROGMEM = {{{0x00, 0x00, 0x00, 0x00}, // Frame 1
                                                    {0x00, 0x00, 0x00, 0x00},
@@ -843,7 +720,7 @@ const uint8_t gfx_Energy[5][4] PROGMEM = {{0xbc, 0xf4, 0x8e, 0x49}, // 0x498ef4b
                                           {0x84, 0x14, 0x52, 0x43}, // 0x43521484
                                           {0xbc, 0xf4, 0x92, 0x3b}}; // 0x3b92f4bc
 const uint8_t ifo_Age[2] = {32, 5};
-const uint8_t gfx_Age[32][4] PROGMEM = {{0x38, 0xce, 0x07, 0x00}, // 0x7ce38
+const uint8_t gfx_Age[5][4] PROGMEM = {{0x38, 0xce, 0x07, 0x00}, // 0x7ce38
                                         {0x44, 0x51, 0x00, 0x00}, // 0x5144
                                         {0x7c, 0xc1, 0x01, 0x00}, // 0x1c17c
                                         {0x44, 0x59, 0x00, 0x00}, // 0x5944
@@ -864,14 +741,14 @@ const uint8_t font_UE3X5[25][4] PROGMEM = {{0b11111011, 0b11101111, 0b11111101, 
                                            {0b10111111, 0b11111111, 0b00111101, 0b11111100}, // ABCDEFGHIJ (3x5)
                                                 
                                            {0b10110010, 0b11010101, 0b11010110, 0b01111100}, // KLMNOPQRST (3x5)
-                                           {0b10110011, 0b11111011, 0b01101101, 0b10001000}, // KLMNOPQRST (3x5)
-                                           {0b11010011, 0b11111011, 0b11101110, 0b11101000}, // KLMNOPQRST (3x5)
+                                           {0b10110011, 0b11011011, 0b01101101, 0b10001000}, // KLMNOPQRST (3x5)
+                                           {0b11010010, 0b11111011, 0b11101110, 0b11101000}, // KLMNOPQRST (3x5)
                                            {0b10110010, 0b11111011, 0b00111101, 0b00101000}, // KLMNOPQRST (3x5)
                                            {0b10111110, 0b11010101, 0b00011101, 0b11001000}, // KLMNOPQRST (3x5)
                                                 
                                            {0b10110110, 0b11011011, 0b11111110, 0b11111100}, // UVWXYZ0123 (3x5)
                                            {0b10110110, 0b11011010, 0b01101010, 0b00100100}, // UVWXYZ0123 (3x5)
-                                           {0b10110111, 0b10101110, 0b10101010, 0b11101100}, // UVWXYZ0123 (3x5)
+                                           {0b10110110, 0b10101110, 0b10101010, 0b11101100}, // UVWXYZ0123 (3x5)
                                            {0b10101111, 0b11010101, 0b00101010, 0b10000100}, // UVWXYZ0123 (3x5)
                                            {0b01100110, 0b11010101, 0b11111111, 0b11111100}, // UVWXYZ0123 (3x5)
                                            
@@ -895,12 +772,3 @@ const uint8_t gfx_Back[5][4] PROGMEM = {{0b00001000, 0b11100011, 0b00011001, 0b0
                                         {0b00111110, 0b11100111, 0b10100001, 0b10000000}, // 0x185e77c
                                         {0b00011000, 0b10010100, 0b10100101, 0b01000000}, // 0x2a52918
                                         {0b00001000, 0b11100100, 0b10011001, 0b00100000}}; // 0x4992710
-
-const uint8_t ifo_Progress[2] = {32, 7};
-const uint8_t gfx_Progress[32][4] PROGMEM = {{0b00011111, 0b11111111, 0b11111111, 0b11111000}, // 0x1ffffff8
-                                             {0b00100000, 0b00000000, 0b00000000, 0b00000100}, // 0x20000004
-                                             {0b00100000, 0b00000000, 0b00000000, 0b00000100}, // 0x20000004
-                                             {0b00100000, 0b00000000, 0b00000000, 0b00000100}, // 0x20000004
-                                             {0b00100000, 0b00000000, 0b00000000, 0b00000100}, // 0x20000004
-                                             {0b00100000, 0b00000000, 0b00000000, 0b00000100}, // 0x20000004
-                                             {0b00011111, 0b11111111, 0b11111111, 0b11111000}}; // 0x1ffffff8
