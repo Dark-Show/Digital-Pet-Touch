@@ -67,8 +67,8 @@ void setup(void) {
   clearPixels();
   drawPixels();
 
-  // Init pet
-  libpet_init();
+  processTouch(true); // Get some random
+  libpet_init(); // Init pet
 }
 
 void drawInactive() {
@@ -212,7 +212,8 @@ void processTouch(bool sr) {
         btn_istate[2] = true;
       }
     }
-  } else if(sr) {
+  }
+  if(sr) {
     randomSeed(p.x); // Update random seed often
   }
 #endif
@@ -326,6 +327,13 @@ void libpet_init(){
   tdisp.oframe    = 0; // Overlay frame
 
   // RPG stats
+  pet.rpg.coins = COIN_DEFAULT;
+  pet.rpg.attack = random(0, 8);
+  pet.rpg.defense = random(0, 8);
+  pet.rpg.luck = random(0, 8);
+  pet.rpg.attack = random(0, 8);
+  pet.rpg.experience = 0;
+  pet.rpg.level = 0;
 }
 void libpet_tick() {
   // Stage Check
@@ -346,6 +354,18 @@ void libpet_tick() {
   } else if(pet.state.alive && !pet.state.sleep) {
     // Random event
     switch(random(31)) {
+      case 4:
+        pet.happiness -= 1; // Dec happiness
+        break;
+      case 7:
+        pet.happiness += 1; // Inc happiness
+        break;
+      case 8:
+        pet.rpg.coins += 5; // small inc coin
+        break;
+      case 9:
+        pet.rpg.coins += 10; // large inc coin
+        break;
       case 12:
         pet.hunger += 1; // inc hunger
         break;
@@ -358,11 +378,6 @@ void libpet_tick() {
       case 20:
         pet.waste += 1; // Inc waste
         break;
-      case 7:
-        pet.happiness += 1; // Inc happiness
-        break;
-      case 4:
-        pet.happiness -= 1; // Dec happiness
     }
     // Regular Cycle
     if (pet.stage > 0) {
@@ -1164,152 +1179,162 @@ void libpet_explore() {
   bool fill = true;
   long tt;
   int i, j, fitems = 0;
+
+  // Is pet able?
+  if (!pet.state.alive || pet.state.sleep || pet.state.eat || pet.stage == 0) {
+    return;
+  }
+
+  // Does user have enough coin
+  if (pet.rpg.coins < EXPLORE_COST) {
+    // No Coin Animation
+    return;
+  }
+  
+  pet.rpg.coins -= EXPLORE_COST;
+  
   doRandTransition(1, 8, true); // frameskip 8 seems nice
   // Set starting co-ordinates
   x = random(0, 32);
   y = random(0, 32);
-  if (pet.state.alive && !pet.state.sleep && !pet.state.eat) {
-    fillPixels(); // Fill real pixel buffer
-    
-    drawPixels();
+  fillPixels(); // Fill real pixel buffer
 
-    for (i = 0; i < 256; i++) { // 256 steps
-      if (hide) {
-        hide = false;
-        // Hide stuff
-        for (j = 0; j < EXPLORE_HIDE; j++) { // Increase with luck
-          r[j][0] = random(0, 32);
-          r[j][1] = random(0, 32);
-        }
-      }
-      setPixel(x, y, 0); // Set Real Pixel Buffer
+  drawPixels();
 
-      // Set backup pixel buffer
-      bpx = calculateXByte(x);
-      bpb[y][bpx] &= ~(1 << (7 - (x - bpx * 8))); // Set backup
-
-      // Explore
-      do {
-        t = random(-8, 9);
-        // Not sure if we need these extra random lines
-        switch(t) {
-          case -8:
-          case -6:
-          case -4:
-          case -2:
-            x--;
-            if (x < 0)
-              x = 0;
-            break;
-          case  0:
-          case  2:
-          case  4:
-          case  6:
-          case  8:
-            y++;
-            if (y > 31)
-              y = 31;
-            break;
-          case -7:
-          case -5:
-          case -3:
-          case -1:
-            y--;
-            if (y < 0)
-              y = 0;
-            break;
-          case 1:
-          case 3:
-          case 5:
-          case 7:
-            x++;
-            if (x > 31)
-              x = 31;
-            break;
-        }
-      } while (!getPixel(x, y));
-
-      // Check for find
-      for (j = 0; j < EXPLORE_HIDE; j++) {
-        if (x == r[j][0] && y == r[j][1]) { // found something
-          // What did we find?
-          switch(random(0, 65)) {
-            case 7:  // item
-              //Serial.println("Item");
-              break;
-            
-            case 60: // deep level entrance (our highest level)
-            case 50:
-            case 40:
-              i = 0; // reset steps
-              if (explorer_high == 0)
-                explorer_high++;
-              gotLevel(explorer_high);
-              fill = true;
-              hide = true;
-              break;
-            case 30:  // next level entrance
-            case 20:
-            case 10:
-            case  0:
-              i = 0; // reset steps
-              gotLevel(++l);
-              if(explorer_high < l)
-                explorer_high = l;
-              fill = true;
-              hide = true;
-              break;
-            case 64: // big coins
-              gotCoins(random(100, (20 * l) + 200)); // Level bonus
-              restore = true;
-              break;
-            case 32: // medium coins
-            case 16:
-              gotCoins(random(20, (10 * l) + 100)); // Level bonus
-              restore = true;
-              break;
-            default: // small coins
-              gotCoins(random(1, (10 * l) + 10)); // Level bonus
-              restore = true; // restore pixel buffer
-          }
-        }
-      }
-      if (fill) { // Fill screen and backup
-        fill = false;
-        fillPixels();
-        setPixel(x, y, 0);
-        for (int y = 0; y < 32; y++) {
-          for (int x = 0; x < 4; x++) {
-            bpb[y][x] = 0xFF;
-          }
-        }
-        drawPixels();
-      }
-      if(restore) {
-        restore = false;
-        // backup x, y
-        bx = x;
-        by = y;
-        for (y = 0; y < 32; y++) {
-          for(x = 0; x < 4; x++) {
-            pixbuf[y][x] = bpb[y][x];
-          }
-        }
-        x = bx;
-        y = by;
-      }
-
-      drawPixels();
-      //delay(10); // DEBUG
-      //delay(1000 / (T_FPS * 4)); // 2 - 4 Seems nicely balanced
-      tt = millis();
-      while (millis() - tt < 1000 / (T_FPS * 4)) { // burn time watching touch
-        processTouch(false);
-        delay(10);
+  for (i = 0; i < 256; i++) { // 256 steps
+    if (hide) {
+      hide = false;
+      // Hide stuff
+      for (j = 0; j < EXPLORE_HIDE + pet.rpg.luck; j++) { // Increase with luck
+        r[j][0] = random(0, 32);
+        r[j][1] = random(0, 32);
       }
     }
+    setPixel(x, y, 0); // Set Real Pixel Buffer
+
+    // Set backup pixel buffer
+    bpx = calculateXByte(x);
+    bpb[y][bpx] &= ~(1 << (7 - (x - bpx * 8))); // Set backup
+
+    // Explore
+    do {
+      t = random(-8, 8);
+      // Not sure if we need these extra random lines
+      switch(t) {
+        case -8:
+        case -6:
+        case -4:
+        case -2:
+          x--;
+          if (x < 0)
+            x = 0;
+          break;
+        case  0:
+        case  2:
+        case  4:
+        case  6:
+          y++;
+          if (y > 31)
+            y = 31;
+          break;
+        case -7:
+        case -5:
+        case -3:
+        case -1:
+          y--;
+          if (y < 0)
+            y = 0;
+          break;
+        case 1:
+        case 3:
+        case 5:
+        case 7:
+          x++;
+          if (x > 31)
+            x = 31;
+          break;
+      }
+    } while (!getPixel(x, y));
+
+    // Check for find
+    for (j = 0; j < EXPLORE_HIDE + pet.rpg.luck; j++) {
+      if (x == r[j][0] && y == r[j][1]) { // found something
+        // What did we find?
+        switch(random(0, 65)) {
+          case 7:  // item
+            //Serial.println("Item");
+            break;
+            
+          case 60: // deep level entrance (our highest level)
+          case 50:
+          case 40:
+            i = 0; // reset steps
+            if (explorer_high == 0)
+              explorer_high++;
+            gotLevel(explorer_high);
+            fill = true;
+            hide = true;
+            break;
+          case 30:  // next level entrance
+          case 20:
+          case 10:
+          case  0:
+            i = 0; // reset steps
+            gotLevel(++l);
+            if(explorer_high < l)
+              explorer_high = l;
+            fill = true;
+            hide = true;
+            break;
+          case 64: // big coins
+            gotCoins(random(100, (20 * l) + 200)); // Level bonus
+            restore = true;
+            break;
+          case 32: // medium coins
+          case 16:
+            gotCoins(random(20, (10 * l) + 100)); // Level bonus
+            restore = true;
+            break;
+          default: // small coins
+            gotCoins(random(1, (10 * l) + 10)); // Level bonus
+            restore = true; // restore pixel buffer
+        }
+      }
+    }
+    if (fill) { // Fill screen and backup
+      fill = false;
+      fillPixels();
+      setPixel(x, y, 0);
+      for (int y = 0; y < 32; y++) {
+        for (int x = 0; x < 4; x++) {
+          bpb[y][x] = 0xFF;
+        }
+      }
+      drawPixels();
+    }
+    if(restore) {
+      restore = false;
+      // backup x, y
+      bx = x;
+      by = y;
+      for (y = 0; y < 32; y++) {
+        for(x = 0; x < 4; x++) {
+          pixbuf[y][x] = bpb[y][x];
+        }
+      }
+      x = bx;
+      y = by;
+    }
+
+    drawPixels();
+    //delay(10); // DEBUG
+    //delay(1000 / (T_FPS * 4)); // 2 - 4 Seems nicely balanced
+    tt = millis();
+    while (millis() - tt < 1000 / (T_FPS * 4)) { // burn time watching touch
+      processTouch(false);
+      delay(10);
+    }
   }
-  // Serial.println("Explore Over");
 }
 
 void gotCoins(int count) {

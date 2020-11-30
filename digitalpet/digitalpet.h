@@ -40,7 +40,9 @@
 
 // 16 (low chance of level 2 reach
 // 32 (low chance of level 6 reach
-#define EXPLORE_HIDE    32
+#define EXPLORE_HIDE     8
+#define EXPLORE_COST    20
+#define COIN_DEFAULT   100
 
 
 // Matrix Screen Adjustments
