@@ -16,7 +16,7 @@ Based on Python Emulator by ryesalvador: https://gist.github.com/ryesalvador/e88
   * Items + Item Bag
     * Allow items to help manage feeding/cleaning the pet automatically
     * Allow consumable items to increase/decrease the life span (reduce age) of a pet.
-  * Findable Locations
+  * Locations
     * Locations will "train" your pet
     * Rare locations can increase/decrease life span
 
