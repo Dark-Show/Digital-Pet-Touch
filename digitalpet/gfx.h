@@ -1,5 +1,5 @@
 /*
- * Digitial Pet Touch - Bsed on Python Emulator by ryesalvador: https://gist.github.com/ryesalvador/e88cb2b4bbe0694d175ef2d7338abd07
+ * Digitial Pet Touch - C port of Tamagotchi Emulator by ryesalvador: https://gist.github.com/ryesalvador/e88cb2b4bbe0694d175ef2d7338abd07
  * Copyright (C) 2020 Greg Michalik
  * 
  * This program is free software: you can redistribute it and/or modify
@@ -15,341 +15,111 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+#if defined(__SAM3X8E__)
+    #undef __FlashStringHelper::F(string_literal)
+    #define F(string_literal) string_literal
+#endif
+
+
+
+// Keyestudio 2.8" LCD Shield Hardware
+#define LCD_CS      A3 // Pin Chip Select (Shared with Touch)
+#define LCD_CD      A2 // Command/Data (Shared with Touch)
+#define LCD_WR      A1 // LCD Write
+#define LCD_RD      A0 // LCD Read
+#define LCD_RESET   A4 // Can alternately just connect to Arduino's reset pin
+#define TOUCH_YP    A3 // Pin Y+ (analog only: An) (Shared with LCD)
+#define TOUCH_XM    A2 // Pin M- (analog only: An) (Shared with LCD)
+#define TOUCH_YM     9 // Pin Y-
+#define TOUCH_XP     8 // Pin X+
+#define TOUCH_OHM  300 // Measured touch resistance in Ohms
+#define TS_MINP     10 // Min Input Pressure
+#define TS_MAXP   1000 // Max Input Preasure
+#define TS_MINX    150 // Touch Min X Position
+#define TS_MINY    170 // Touch Min Y Position
+#define TS_MAXX    920 // Touch Max X Position
+#define TS_MAXY    960 // Touch Max Y Position
+#define TS_DEBO     50 // Touch controls debounce (Noisy touch?)
+
+// Matrix Screen Adjustments
+#define T_SELS  0.12 // Multiplier (12% of screen)
+#define T_SELP  2    // Selector padding (Pixels)
+#define T_PIXS  6    // Pixel size (Pixels)
+#define T_PIXG  1    // Pixel padding (Pixels)
+#define T_BUTP  5    // Touch controls padding (Pixels)
+
+// Animation IDs
+#define IDLE_EGG        0
+#define IDLE_BABY       1
+#define IDLE_MATURE     2
+#define SLEEP_BABY      3
+#define SLEEP_MATURE    4
+#define OVERLAY_CLEAN   5
+#define OVERLAY_EXLAIM  6
+#define OVERLAY_ZZZ     7
+#define OVERLAY_DEAD    8
+#define OVERLAY_EAT     9
+#define OVERLAY_STINK  10
+#define DISPLAY_HUNGER 0
+#define DISPLAY_ENERGY 1
+#define DISPLAY_WASTE  2
+#define DISPLAY_AGE    3
+
+struct tama_state {
+  bool alive;
+  bool eat;
+  bool sleep;
+  bool stink;
+  bool warn;
+  bool clean;
+};
+
+struct tama_pet {
+   uint16_t hunger;
+   uint16_t energy;
+   uint16_t waste;
+   int16_t  happiness;
+   uint16_t age;
+   uint8_t  stage;
+   struct   tama_state state;
+};
+
+struct tama_display {
+   int8_t selector;
+   bool   in_stat;
+   int8_t sel_stat;
+   int8_t offset;
+   int8_t animation;
+   int8_t aframe;
+   int8_t overlay;
+   int8_t oframe;
+};
+
+struct tama_pet pet;
+struct tama_display tdisp;
+
+Adafruit_TFTLCD tft(LCD_CS, LCD_CD, LCD_WR, LCD_RD, LCD_RESET);
+TouchScreen touch = TouchScreen(TOUCH_XP, TOUCH_YP, TOUCH_XM, TOUCH_YM, TOUCH_OHM);
+
+// Debounce Variables
+int  btn_cstate[3] = {0, 0, 0}; // Current button state
+int  btn_lstate[3] = {0, 0, 0}; // Previous button state
+long btn_tstate[3] = {0, 0, 0}; // Time of last state change
+
+// Display Variables
+int lcd_w = 0; // LCD Width
+int lcd_h = 0; // LCD Height
+
+// System Timing Variables
+long lastTick = 0;
+long lastFrame = 0;
 
 uint8_t disp[32][4];   // Active pixels
 uint8_t pixbuf[32][4]; // Pixel buffer
-int gfx_frames[16] = {2, 2, 2, 2, 2, 1, 2, 2, 2, 6, 2, 1, 1, 1, 1, 1};
+
+int gfx_frames[16] = {2, 2, 2, 2, 2, 1, 2, 2, 2, 5, 2, 1, 1, 1, 1, 1};
 
 // Bits(right to left)
-const uint8_t gfx_idleEgg[2][32][4] PROGMEM  = {{{0x00, 0x00, 0x00, 0x00},
-                                                 {0x00, 0x00, 0x00, 0x00},
-                                                 {0x00, 0x00, 0x00, 0x00},
-                                                 {0x00, 0x00, 0x00, 0x00},
-                                                 {0x00, 0x00, 0x00, 0x00},
-                                                 {0x00, 0x00, 0x00, 0x00},
-                                                 {0x00, 0x00, 0x00, 0x00},
-                                                 {0x00, 0x00, 0x00, 0x00},
-                                                 {0x00, 0x00, 0x00, 0x00},
-                                                 {0x00, 0x00, 0x00, 0x00},
-                                                 {0x00, 0x00, 0x00, 0x00},
-                                                 {0x00, 0x00, 0x00, 0x00},
-                                                 {0x00, 0x00, 0x00, 0x00},
-                                                 {0x00, 0x00, 0x00, 0x00},
-                                                 {0x00, 0x00, 0x00, 0x00},
-                                                 {0x00, 0x00, 0x00, 0x00},
-                                                 {0x00, 0x00, 0x00, 0x00},
-                                                 {0x00, 0x00, 0x00, 0x00},
-                                                 {0x00, 0x00, 0x00, 0x00},
-                                                 {0x00, 0xe0, 0x07, 0x00}, // 0x7e000
-                                                 {0x00, 0x70, 0x08, 0x00}, // 0x87000
-                                                 {0x00, 0x38, 0x10, 0x00}, // 0x103800
-                                                 {0x00, 0x0c, 0x30, 0x00}, // 0x300c00
-                                                 {0x00, 0x04, 0x70, 0x00}, // 0x700400
-                                                 {0x00, 0x82, 0x41, 0x00}, // 0x418200
-                                                 {0x00, 0x82, 0x41, 0x00}, // 0x418200
-                                                 {0x00, 0x02, 0x40, 0x00}, // 0x400200
-                                                 {0x00, 0x06, 0x70, 0x00}, // 0x700600
-                                                 {0x00, 0x0c, 0x3c, 0x00}, // 0x3c0c00
-                                                 {0x00, 0x08, 0x1e, 0x00}, // 0x1e0800
-                                                 {0x00, 0xfc, 0x3f, 0x00}, // 0x3ffc00
-                                                 {0x00, 0x00, 0x00, 0x00}},
-                                 
-                                                {{0x00, 0x00, 0x00, 0x00},
-                                                 {0x00, 0x00, 0x00, 0x00},
-                                                 {0x00, 0x00, 0x00, 0x00},
-                                                 {0x00, 0x00, 0x00, 0x00},
-                                                 {0x00, 0x00, 0x00, 0x00},
-                                                 {0x00, 0x00, 0x00, 0x00},
-                                                 {0x00, 0x00, 0x00, 0x00},
-                                                 {0x00, 0x00, 0x00, 0x00},
-                                                 {0x00, 0x00, 0x00, 0x00},
-                                                 {0x00, 0x00, 0x00, 0x00},
-                                                 {0x00, 0x00, 0x00, 0x00},
-                                                 {0x00, 0x00, 0x00, 0x00},
-                                                 {0x00, 0x00, 0x00, 0x00},
-                                                 {0x00, 0x00, 0x00, 0x00},
-                                                 {0x00, 0x00, 0x00, 0x00},
-                                                 {0x00, 0x00, 0x00, 0x00},
-                                                 {0x00, 0x00, 0x00, 0x00},
-                                                 {0x00, 0x00, 0x00, 0x00},
-                                                 {0x00, 0x00, 0x00, 0x00},
-                                                 {0x00, 0x00, 0x00, 0x00},
-                                                 {0x00, 0xe0, 0x07, 0x00}, // 0x7e000
-                                                 {0x00, 0x70, 0x08, 0x00}, // 0x87000
-                                                 {0x00, 0x38, 0x10, 0x00}, // 0x103800
-                                                 {0x00, 0x0c, 0x30, 0x00}, // 0x300c00
-                                                 {0x00, 0x04, 0x70, 0x00}, // 0x700400
-                                                 {0x00, 0x02, 0x40, 0x00}, // 0x400200
-                                                 {0x00, 0x82, 0x41, 0x00}, // 0x418200
-                                                 {0x00, 0x82, 0x41, 0x00}, // 0x418200
-                                                 {0x00, 0x06, 0x70, 0x00}, // 0x700600
-                                                 {0x00, 0x0c, 0x3c, 0x00}, // 0x3c0c00
-                                                 {0x00, 0xff, 0xff, 0x00}, // 0xffff00
-                                                 {0x00, 0x00, 0x00, 0x00}}};
-
-const uint8_t gfx_idleBaby[2][32][4] PROGMEM = {{{0x00, 0x00, 0x00, 0x00}, // Frame 1
-                                                 {0x00, 0x00, 0x00, 0x00},
-                                                 {0x00, 0x00, 0x00, 0x00},
-                                                 {0x00, 0x00, 0x00, 0x00},
-                                                 {0x00, 0x00, 0x00, 0x00},
-                                                 {0x00, 0x00, 0x00, 0x00},
-                                                 {0x00, 0x00, 0x00, 0x00},
-                                                 {0x00, 0x00, 0x00, 0x00},
-                                                 {0x00, 0x00, 0x00, 0x00},
-                                                 {0x00, 0x00, 0x00, 0x00},
-                                                 {0x00, 0x00, 0x00, 0x00},
-                                                 {0x00, 0x00, 0x00, 0x00},
-                                                 {0x00, 0x00, 0x00, 0x00},
-                                                 {0x00, 0x00, 0x00, 0x00},
-                                                 {0x00, 0x00, 0x00, 0x00},
-                                                 {0x00, 0x00, 0x00, 0x00},
-                                                 {0x00, 0x00, 0x00, 0x00},
-                                                 {0x00, 0x00, 0x00, 0x00},
-                                                 {0x00, 0x00, 0x00, 0x00},
-                                                 {0x00, 0x00, 0x00, 0x00},
-                                                 {0x00, 0x00, 0x00, 0x00},
-                                                 {0x00, 0x00, 0x00, 0x00},
-                                                 {0x00, 0x00, 0x00, 0x00},
-                                                 {0x00, 0x00, 0x00, 0x00},
-                                                 {0x00, 0x00, 0x00, 0x00},
-                                                 {0x00, 0x00, 0x00, 0x00},
-                                                 {0x00, 0x00, 0x00, 0x00},
-                                                 {0x00, 0x00, 0x00, 0x00},
-                                                 {0x00, 0x00, 0x00, 0x00},
-                                                 {0x00, 0x80, 0x07, 0x00}, // 0x78000
-                                                 {0x00, 0x40, 0x0b, 0x00}, // 0xb4000
-                                                 {0x00, 0xe0, 0x1f, 0x00}},// 0x1fe000
-                            
-                                                {{0x00, 0x00, 0x00, 0x00},// Frame 2
-                                                 {0x00, 0x00, 0x00, 0x00},
-                                                 {0x00, 0x00, 0x00, 0x00},
-                                                 {0x00, 0x00, 0x00, 0x00},
-                                                 {0x00, 0x00, 0x00, 0x00},
-                                                 {0x00, 0x00, 0x00, 0x00},
-                                                 {0x00, 0x00, 0x00, 0x00},
-                                                 {0x00, 0x00, 0x00, 0x00},
-                                                 {0x00, 0x00, 0x00, 0x00},
-                                                 {0x00, 0x00, 0x00, 0x00},
-                                                 {0x00, 0x00, 0x00, 0x00},
-                                                 {0x00, 0x00, 0x00, 0x00},
-                                                 {0x00, 0x00, 0x00, 0x00},
-                                                 {0x00, 0x00, 0x00, 0x00},
-                                                 {0x00, 0x00, 0x00, 0x00},
-                                                 {0x00, 0x00, 0x00, 0x00},
-                                                 {0x00, 0x00, 0x00, 0x00},
-                                                 {0x00, 0x00, 0x00, 0x00},
-                                                 {0x00, 0x00, 0x00, 0x00},
-                                                 {0x00, 0x00, 0x00, 0x00},
-                                                 {0x00, 0x00, 0x00, 0x00},
-                                                 {0x00, 0x00, 0x00, 0x00},
-                                                 {0x00, 0x00, 0x00, 0x00},
-                                                 {0x00, 0x00, 0x00, 0x00},
-                                                 {0x00, 0x00, 0x00, 0x00},
-                                                 {0x00, 0x80, 0x07, 0x00}, // 0x78000
-                                                 {0x00, 0xc0, 0x0c, 0x00}, // 0xcc000
-                                                 {0x00, 0x40, 0x08, 0x00}, // 0x84000
-                                                 {0x00, 0x40, 0x0b, 0x00}, // 0xb4000
-                                                 {0x00, 0x40, 0x08, 0x00}, // 0x84000
-                                                 {0x00, 0x80, 0x07, 0x00}, // 0x78000
-                                                 {0x00, 0x00, 0x00, 0x00}}};
-
-const uint8_t gfx_idleMature[2][32][4] PROGMEM = {{{0x00, 0x00, 0x00, 0x00}, // Frame 1
-                                                   {0x00, 0x00, 0x00, 0x00},
-                                                   {0x00, 0x00, 0x00, 0x00},
-                                                   {0x00, 0x00, 0x00, 0x00},
-                                                   {0x00, 0x00, 0x00, 0x00},
-                                                   {0x00, 0x00, 0x00, 0x00},
-                                                   {0x00, 0x00, 0x00, 0x00},
-                                                   {0x00, 0x00, 0x00, 0x00},
-                                                   {0x00, 0x00, 0x00, 0x00},
-                                                   {0x00, 0xfc, 0x00, 0x00}, // 0xfc00
-                                                   {0x00, 0x02, 0x01, 0x00}, // 0x10200
-                                                   {0x00, 0x49, 0x02, 0x00}, // 0x24900
-                                                   {0x00, 0x01, 0x02, 0x00}, // 0x20100
-                                                   {0x00, 0x31, 0x02, 0x00}, // 0x23100
-                                                   {0x00, 0x01, 0x02, 0x00}, // 0x20100
-                                                   {0x00, 0x01, 0x02, 0x00}, // 0x20100
-                                                   {0x00, 0x02, 0x01, 0x00}, // 0x10200
-                                                   {0x00, 0xfc, 0x00, 0x00}, // 0xfc00
-                                                   {0x00, 0x00, 0x00, 0x00},
-                                                   {0x00, 0x00, 0x00, 0x00},
-                                                   {0x00, 0x00, 0x00, 0x00},
-                                                   {0x00, 0x00, 0x00, 0x00},
-                                                   {0x00, 0x00, 0x00, 0x00},
-                                                   {0x00, 0x00, 0x00, 0x00},
-                                                   {0x00, 0x00, 0x00, 0x00},
-                                                   {0x00, 0x00, 0x00, 0x00},
-                                                   {0x00, 0x00, 0x00, 0x00},
-                                                   {0x00, 0x00, 0x00, 0x00},
-                                                   {0x00, 0x00, 0x00, 0x00},
-                                                   {0x00, 0x00, 0x00, 0x00},
-                                                   {0x00, 0x00, 0x00, 0x00},
-                                                   {0x00, 0x00, 0x00, 0x00}},
-                            
-                                                   {{0x00, 0x00, 0x00, 0x00},// Frame 2
-                                                   {0x00, 0x00, 0x00, 0x00},
-                                                   {0x00, 0x00, 0x00, 0x00},
-                                                   {0x00, 0x00, 0x00, 0x00},
-                                                   {0x00, 0x00, 0x00, 0x00},
-                                                   {0x00, 0x00, 0x00, 0x00},
-                                                   {0x00, 0x00, 0x00, 0x00},
-                                                   {0x00, 0x00, 0x00, 0x00},
-                                                   {0x00, 0x00, 0x00, 0x00},
-                                                   {0x00, 0x00, 0x00, 0x00},
-                                                   {0x00, 0x00, 0x00, 0x00},
-                                                   {0x00, 0xfc, 0x00, 0x00}, // 0xfc00
-                                                   {0x00, 0x02, 0x01, 0x00}, // 0x10200
-                                                   {0x00, 0x85, 0x02, 0x00}, // 0x28500
-                                                   {0x00, 0x31, 0x02, 0x00}, // 0x23100
-                                                   {0x00, 0x31, 0x02, 0x00}, // 0x23100
-                                                   {0x00, 0x01, 0x02, 0x00}, // 0x20100
-                                                   {0x00, 0x02, 0x01, 0x00}, // 0x10200
-                                                   {0x00, 0xfc, 0x00, 0x00}, // 0xfc00
-                                                   {0x00, 0x00, 0x00, 0x00},
-                                                   {0x00, 0x00, 0x00, 0x00},
-                                                   {0x00, 0x00, 0x00, 0x00},
-                                                   {0x00, 0x00, 0x00, 0x00},
-                                                   {0x00, 0x00, 0x00, 0x00},
-                                                   {0x00, 0x00, 0x00, 0x00},
-                                                   {0x00, 0x00, 0x00, 0x00},
-                                                   {0x00, 0x00, 0x00, 0x00},
-                                                   {0x00, 0x00, 0x00, 0x00},
-                                                   {0x00, 0x00, 0x00, 0x00},
-                                                   {0x00, 0x00, 0x00, 0x00},
-                                                   {0x00, 0x00, 0x00, 0x00},
-                                                   {0x00, 0x00, 0x00, 0x00}}};
-
-const uint8_t gfx_sleepBaby[2][32][4] PROGMEM = {{{0x00, 0x00, 0x00, 0x00}, // Frame 1
-                                                  {0x00, 0x00, 0x00, 0x00},
-                                                  {0x00, 0x00, 0x00, 0x00},
-                                                  {0x00, 0x00, 0x00, 0x00},
-                                                  {0x00, 0x00, 0x00, 0x00},
-                                                  {0x00, 0x00, 0x00, 0x00},
-                                                  {0x00, 0x00, 0x00, 0x00},
-                                                  {0x00, 0x00, 0x00, 0x00},
-                                                  {0x00, 0x00, 0x00, 0x00},
-                                                  {0x00, 0x00, 0x00, 0x00},
-                                                  {0x00, 0x00, 0x00, 0x00},
-                                                  {0x00, 0x00, 0x00, 0x00},
-                                                  {0x00, 0x00, 0x00, 0x00},
-                                                  {0x00, 0x00, 0x00, 0x00},
-                                                  {0x00, 0x00, 0x00, 0x00},
-                                                  {0x00, 0x00, 0x00, 0x00},
-                                                  {0x00, 0x00, 0x00, 0x00},
-                                                  {0x00, 0x00, 0x00, 0x00},
-                                                  {0x00, 0x00, 0x00, 0x00},
-                                                  {0x00, 0x00, 0x00, 0x00},
-                                                  {0x00, 0x00, 0x00, 0x00},
-                                                  {0x00, 0x00, 0x00, 0x00},
-                                                  {0x00, 0x00, 0x00, 0x00},
-                                                  {0x00, 0x00, 0x00, 0x00},
-                                                  {0x00, 0x00, 0x00, 0x00},
-                                                  {0x00, 0x00, 0x00, 0x00},
-                                                  {0x00, 0x00, 0x00, 0x00},
-                                                  {0x00, 0x00, 0x00, 0x00},
-                                                  {0x00, 0x00, 0x00, 0x00},
-                                                  {0x00, 0x80, 0x07, 0x00}, // 0x78000
-                                                  {0x00, 0xc0, 0x0f, 0x00}, // 0xfc000
-                                                  {0x00, 0xe0, 0x1f, 0x00}},// 0x1fe000
-                            
-                                                 {{0x00, 0x00, 0x00, 0x00},// Frame 2
-                                                  {0x00, 0x00, 0x00, 0x00},
-                                                  {0x00, 0x00, 0x00, 0x00},
-                                                  {0x00, 0x00, 0x00, 0x00},
-                                                  {0x00, 0x00, 0x00, 0x00},
-                                                  {0x00, 0x00, 0x00, 0x00},
-                                                  {0x00, 0x00, 0x00, 0x00},
-                                                  {0x00, 0x00, 0x00, 0x00},
-                                                  {0x00, 0x00, 0x00, 0x00},
-                                                  {0x00, 0x00, 0x00, 0x00},
-                                                  {0x00, 0x00, 0x00, 0x00},
-                                                  {0x00, 0x00, 0x00, 0x00},
-                                                  {0x00, 0x00, 0x00, 0x00},
-                                                  {0x00, 0x00, 0x00, 0x00},
-                                                  {0x00, 0x00, 0x00, 0x00},
-                                                  {0x00, 0x00, 0x00, 0x00},
-                                                  {0x00, 0x00, 0x00, 0x00},
-                                                  {0x00, 0x00, 0x00, 0x00},
-                                                  {0x00, 0x00, 0x00, 0x00},
-                                                  {0x00, 0x00, 0x00, 0x00},
-                                                  {0x00, 0x00, 0x00, 0x00},
-                                                  {0x00, 0x00, 0x00, 0x00},
-                                                  {0x00, 0x00, 0x00, 0x00},
-                                                  {0x00, 0x00, 0x00, 0x00},
-                                                  {0x00, 0x00, 0x00, 0x00},
-                                                  {0x00, 0x00, 0x00, 0x00},
-                                                  {0x00, 0x00, 0x00, 0x00},
-                                                  {0x00, 0x00, 0x00, 0x00},
-                                                  {0x00, 0x00, 0x00, 0x00},
-                                                  {0x00, 0x00, 0x00, 0x00},
-                                                  {0x00, 0xe0, 0x1f, 0x00},   // 0x1fe000
-                                                  {0x00, 0xf0, 0x3f, 0x00}}}; // 0x3ff000
-
-const uint8_t gfx_sleepMature[2][32][4] PROGMEM = {{{0x00, 0x00, 0x00, 0x00}, // Frame 1
-                                                    {0x00, 0x00, 0x00, 0x00},
-                                                    {0x00, 0x00, 0x00, 0x00},
-                                                    {0x00, 0x00, 0x00, 0x00},
-                                                    {0x00, 0x00, 0x00, 0x00},
-                                                    {0x00, 0x00, 0x00, 0x00},
-                                                    {0x00, 0x00, 0x00, 0x00},
-                                                    {0x00, 0x00, 0x00, 0x00},
-                                                    {0x00, 0x00, 0x00, 0x00},
-                                                    {0x00, 0x00, 0x00, 0x00},
-                                                    {0x00, 0x00, 0x00, 0x00},
-                                                    {0x00, 0x00, 0x00, 0x00},
-                                                    {0x00, 0x00, 0x00, 0x00},
-                                                    {0x00, 0x00, 0x00, 0x00},
-                                                    {0x00, 0x00, 0x00, 0x00},
-                                                    {0x00, 0x00, 0x00, 0x00},
-                                                    {0x00, 0x00, 0x00, 0x00},
-                                                    {0x00, 0x00, 0x00, 0x00},
-                                                    {0x00, 0x00, 0x00, 0x00},
-                                                    {0x00, 0x00, 0x00, 0x00},
-                                                    {0x00, 0x00, 0x00, 0x00},
-                                                    {0x00, 0x00, 0x00, 0x00},
-                                                    {0x00, 0x00, 0x00, 0x00},
-                                                    {0x00, 0x00, 0x00, 0x00},
-                                                    {0x00, 0x00, 0x00, 0x00},
-                                                    {0x00, 0x00, 0x00, 0x00},
-                                                    {0x00, 0x00, 0x00, 0x00},
-                                                    {0x00, 0x00, 0x00, 0x00},
-                                                    {0x00, 0x00, 0x00, 0x00},
-                                                    {0x00, 0xfc, 0x03, 0x00}, // 0x3fc00
-                                                    {0x00, 0x02, 0x04, 0x00}, // 0x40200
-                                                    {0x00, 0x01, 0x08, 0x00}},// 0x80100
-                            
-                                                   {{0x00, 0x00, 0x00, 0x00},// Frame 2
-                                                    {0x00, 0x00, 0x00, 0x00},
-                                                    {0x00, 0x00, 0x00, 0x00},
-                                                    {0x00, 0x00, 0x00, 0x00},
-                                                    {0x00, 0x00, 0x00, 0x00},
-                                                    {0x00, 0x00, 0x00, 0x00},
-                                                    {0x00, 0x00, 0x00, 0x00},
-                                                    {0x00, 0x00, 0x00, 0x00},
-                                                    {0x00, 0x00, 0x00, 0x00},
-                                                    {0x00, 0x00, 0x00, 0x00},
-                                                    {0x00, 0x00, 0x00, 0x00},
-                                                    {0x00, 0x00, 0x00, 0x00},
-                                                    {0x00, 0x00, 0x00, 0x00},
-                                                    {0x00, 0x00, 0x00, 0x00},
-                                                    {0x00, 0x00, 0x00, 0x00},
-                                                    {0x00, 0x00, 0x00, 0x00},
-                                                    {0x00, 0x00, 0x00, 0x00},
-                                                    {0x00, 0x00, 0x00, 0x00},
-                                                    {0x00, 0x00, 0x00, 0x00},
-                                                    {0x00, 0x00, 0x00, 0x00},
-                                                    {0x00, 0x00, 0x00, 0x00},
-                                                    {0x00, 0x00, 0x00, 0x00},
-                                                    {0x00, 0x00, 0x00, 0x00},
-                                                    {0x00, 0x00, 0x00, 0x00},
-                                                    {0x00, 0x00, 0x00, 0x00},
-                                                    {0x00, 0x00, 0x00, 0x00},
-                                                    {0x00, 0x00, 0x00, 0x00},
-                                                    {0x00, 0x00, 0x00, 0x00},
-                                                    {0x00, 0xf8, 0x01, 0x00},   // 0x1f800
-                                                    {0x00, 0x04, 0x02, 0x00},   // 0x20400
-                                                    {0x00, 0x02, 0x04, 0x00},   // 0x40200
-                                                    {0x00, 0x02, 0x04, 0x00}}}; // 0x40200
 
 const uint8_t gfx_overlayClean[1][32][4] PROGMEM = {{{0x02, 0x00, 0x00, 0x00}, // Frame 1
                                                      {0x02, 0x00, 0x00, 0x00},
@@ -582,7 +352,7 @@ const uint8_t gfx_overlayDead[2][32][4] PROGMEM = {{{0x00, 0x00, 0x00, 0x00}, //
                                                     {0x00, 0x00, 0x00, 0x00},
                                                     {0x00, 0x00, 0x00, 0x00}}};
 
-const uint8_t gfx_overlayEat[6][32][4] PROGMEM = {{{0x00, 0x00, 0x00, 0x00}, // Frame 1
+const uint8_t gfx_overlayEat[5][32][4] PROGMEM = {{{0x00, 0x00, 0x00, 0x00}, // Frame 1
                                                    {0x00, 0x00, 0x00, 0x00},
                                                    {0x00, 0x00, 0x00, 0x00},
                                                    {0x00, 0x00, 0x00, 0x00},
@@ -724,39 +494,6 @@ const uint8_t gfx_overlayEat[6][32][4] PROGMEM = {{{0x00, 0x00, 0x00, 0x00}, // 
                                                    {0x00, 0x00, 0x00, 0x04}, // 0x4000000
                                                    {0x00, 0x00, 0x00, 0x02}, // 0x2000000
                                                    {0x00, 0x00, 0x00, 0x01}, // 0x1000000
-                                                   {0x00, 0x00, 0x00, 0x00},
-                                                   {0x00, 0x00, 0x00, 0x00},
-                                                   {0x00, 0x00, 0x00, 0x00},
-                                                   {0x00, 0x00, 0x00, 0x00},
-                                                   {0x00, 0x00, 0x00, 0x00},
-                                                   {0x00, 0x00, 0x00, 0x00},
-                                                   {0x00, 0x00, 0x00, 0x00},
-                                                   {0x00, 0x00, 0x00, 0x00},
-                                                   {0x00, 0x00, 0x00, 0x00},
-                                                   {0x00, 0x00, 0x00, 0x00},
-                                                   {0x00, 0x00, 0x00, 0x00},
-                                                   {0x00, 0x00, 0x00, 0x00},
-                                                   {0x00, 0x00, 0x00, 0x00},
-                                                   {0x00, 0x00, 0x00, 0x00},
-                                                   {0x00, 0x00, 0x00, 0x00},
-                                                   {0x00, 0x00, 0x00, 0x00},
-                                                   {0x00, 0x00, 0x00, 0x00},
-                                                   {0x00, 0x00, 0x00, 0x00},
-                                                   {0x00, 0x00, 0x00, 0x00},
-                                                   {0x00, 0x00, 0x00, 0x00},
-                                                   {0x00, 0x00, 0x00, 0x00},
-                                                   {0x00, 0x00, 0x00, 0x00}},
-                                   
-                                                  {{0x00, 0x00, 0x00, 0x00}, // Frame 6
-                                                   {0x00, 0x00, 0x00, 0x00},
-                                                   {0x00, 0x00, 0x00, 0x00},
-                                                   {0x00, 0x00, 0x00, 0x00},
-                                                   {0x00, 0x00, 0x00, 0x00},
-                                                   {0x00, 0x00, 0x00, 0x00},
-                                                   {0x00, 0x00, 0x00, 0x00},
-                                                   {0x00, 0x00, 0x00, 0x00},
-                                                   {0x00, 0x00, 0x00, 0x00},
-                                                   {0x00, 0x00, 0x00, 0x00},
                                                    {0x00, 0x00, 0x00, 0x00},
                                                    {0x00, 0x00, 0x00, 0x00},
                                                    {0x00, 0x00, 0x00, 0x00},
@@ -1010,12 +747,95 @@ const uint8_t gfx_zzzIcon[32][4] PROGMEM = {{0x00, 0x00, 0x00, 0x00},
                                             {0x00, 0x00, 0x00, 0x00},
                                             {0x00, 0x00, 0x00, 0x00},
                                             {0x00, 0x00, 0x00, 0x00}};
+
+const uint8_t gfx_idleEgg[2][12][4] PROGMEM  = {{{0x00, 0xe0, 0x07, 0x00}, // 0x7e000
+                                                 {0x00, 0x70, 0x08, 0x00}, // 0x87000
+                                                 {0x00, 0x38, 0x10, 0x00}, // 0x103800
+                                                 {0x00, 0x0c, 0x30, 0x00}, // 0x300c00
+                                                 {0x00, 0x04, 0x70, 0x00}, // 0x700400
+                                                 {0x00, 0x82, 0x41, 0x00}, // 0x418200
+                                                 {0x00, 0x82, 0x41, 0x00}, // 0x418200
+                                                 {0x00, 0x02, 0x40, 0x00}, // 0x400200
+                                                 {0x00, 0x06, 0x70, 0x00}, // 0x700600
+                                                 {0x00, 0x0c, 0x3c, 0x00}, // 0x3c0c00
+                                                 {0x00, 0x08, 0x1e, 0x00}, // 0x1e0800
+                                                 {0x00, 0xfc, 0x3f, 0x00}}, // 0x3ffc00
+                                 
+                                                {{0x00, 0x00, 0x00, 0x00},
+                                                 {0x00, 0xe0, 0x07, 0x00}, // 0x7e000
+                                                 {0x00, 0x70, 0x08, 0x00}, // 0x87000
+                                                 {0x00, 0x38, 0x10, 0x00}, // 0x103800
+                                                 {0x00, 0x0c, 0x30, 0x00}, // 0x300c00
+                                                 {0x00, 0x04, 0x70, 0x00}, // 0x700400
+                                                 {0x00, 0x02, 0x40, 0x00}, // 0x400200
+                                                 {0x00, 0x82, 0x41, 0x00}, // 0x418200
+                                                 {0x00, 0x82, 0x41, 0x00}, // 0x418200
+                                                 {0x00, 0x06, 0x70, 0x00}, // 0x700600
+                                                 {0x00, 0x0c, 0x3c, 0x00}, // 0x3c0c00
+                                                 {0x00, 0xff, 0xff, 0x00}}}; // 0xffff00
+
+const uint8_t gfx_idleBaby[2][7][4] PROGMEM = {{{0x00, 0x00, 0x00, 0x00},
+                                                 {0x00, 0x00, 0x00, 0x00},
+                                                 {0x00, 0x00, 0x00, 0x00},
+                                                 {0x00, 0x00, 0x00, 0x00},
+                                                 {0x00, 0x80, 0x07, 0x00}, // 0x78000
+                                                 {0x00, 0x40, 0x0b, 0x00}, // 0xb4000
+                                                 {0x00, 0xe0, 0x1f, 0x00}},// 0x1fe000
+                            
+                                                {{0x00, 0x80, 0x07, 0x00}, // 0x78000
+                                                 {0x00, 0xc0, 0x0c, 0x00}, // 0xcc000
+                                                 {0x00, 0x40, 0x08, 0x00}, // 0x84000
+                                                 {0x00, 0x40, 0x0b, 0x00}, // 0xb4000
+                                                 {0x00, 0x40, 0x08, 0x00}, // 0x84000
+                                                 {0x00, 0x80, 0x07, 0x00}, // 0x78000
+                                                 {0x00, 0x00, 0x00, 0x00}}};
+
+const uint8_t gfx_idleMature[2][10][4] PROGMEM = {{{0x00, 0xfc, 0x00, 0x00}, // 0xfc00
+                                                   {0x00, 0x02, 0x01, 0x00}, // 0x10200
+                                                   {0x00, 0x49, 0x02, 0x00}, // 0x24900
+                                                   {0x00, 0x01, 0x02, 0x00}, // 0x20100
+                                                   {0x00, 0x31, 0x02, 0x00}, // 0x23100
+                                                   {0x00, 0x01, 0x02, 0x00}, // 0x20100
+                                                   {0x00, 0x01, 0x02, 0x00}, // 0x20100
+                                                   {0x00, 0x02, 0x01, 0x00}, // 0x10200
+                                                   {0x00, 0xfc, 0x00, 0x00}, // 0xfc00
+                                                   {0x00, 0x00, 0x00, 0x00}},
+                            
+                                                   {{0x00, 0x00, 0x00, 0x00},
+                                                   {0x00, 0x00, 0x00, 0x00},
+                                                   {0x00, 0xfc, 0x00, 0x00}, // 0xfc00
+                                                   {0x00, 0x02, 0x01, 0x00}, // 0x10200
+                                                   {0x00, 0x85, 0x02, 0x00}, // 0x28500
+                                                   {0x00, 0x31, 0x02, 0x00}, // 0x23100
+                                                   {0x00, 0x31, 0x02, 0x00}, // 0x23100
+                                                   {0x00, 0x01, 0x02, 0x00}, // 0x20100
+                                                   {0x00, 0x02, 0x01, 0x00}, // 0x10200
+                                                   {0x00, 0xfc, 0x00, 0x00}}}; // 0xfc00
+                                                   
+
+const uint8_t gfx_sleepBaby[2][3][4] PROGMEM = {{{0x00, 0x80, 0x07, 0x00}, // 0x78000
+                                                  {0x00, 0xc0, 0x0f, 0x00}, // 0xfc000
+                                                  {0x00, 0xe0, 0x1f, 0x00}},// 0x1fe000
+                            
+                                                 {{0x00, 0x00, 0x00, 0x00},
+                                                  {0x00, 0xe0, 0x1f, 0x00},   // 0x1fe000
+                                                  {0x00, 0xf0, 0x3f, 0x00}}}; // 0x3ff000
+
+const uint8_t gfx_sleepMature[2][32][4] PROGMEM = {{{0x00, 0x00, 0x00, 0x00},
+                                                    {0x00, 0xfc, 0x03, 0x00}, // 0x3fc00
+                                                    {0x00, 0x02, 0x04, 0x00}, // 0x40200
+                                                    {0x00, 0x01, 0x08, 0x00}},// 0x80100
+                            
+                                                   {{0x00, 0xf8, 0x01, 0x00},   // 0x1f800
+                                                    {0x00, 0x04, 0x02, 0x00},   // 0x20400
+                                                    {0x00, 0x02, 0x04, 0x00},   // 0x40200
+                                                    {0x00, 0x02, 0x04, 0x00}}}; // 0x40200
 const uint8_t ifo_Hunger[2] = {32, 5};
 const uint8_t gfx_Hunger[5][4] PROGMEM = {{0xa4, 0x94, 0xcc, 0x3b}, // 0x3bcc94a4
-                                                 {0xa4, 0xb4, 0x52, 0x48}, // 0x4852b4a4
-                                                 {0xbc, 0xd4, 0xc2, 0x39}, // 0x39c2d4bc
-                                                 {0xa4, 0x94, 0x5a, 0x48}, // 0x485a94a4
-                                                 {0x24, 0x93, 0xdc, 0x4b}}; // 0x4bdc9324
+                                          {0xa4, 0xb4, 0x52, 0x48}, // 0x4852b4a4
+                                          {0xbc, 0xd4, 0xc2, 0x39}, // 0x39c2d4bc
+                                          {0xa4, 0x94, 0x5a, 0x48}, // 0x485a94a4
+                                          {0x24, 0x93, 0xdc, 0x4b}}; // 0x4bdc9324
 const uint8_t ifo_Energy[2] = {32, 5};
 const uint8_t gfx_Energy[5][4] PROGMEM = {{0xbc, 0xf4, 0x8e, 0x49}, // 0x498ef4bc
                                           {0x84, 0x15, 0x52, 0x4a}, // 0x4a521584

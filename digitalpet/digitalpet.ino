@@ -1,5 +1,5 @@
 /*
- * Digital Pet Touch - Based on Python Emulator by ryesalvador: https://gist.github.com/ryesalvador/e88cb2b4bbe0694d175ef2d7338abd07            
+ * Digital Pet Touch - C port of Tamagotchi Emulator by ryesalvador: https://gist.github.com/ryesalvador/e88cb2b4bbe0694d175ef2d7338abd07            
  * Copyright (C) 2020 Greg Michalik
  * 
  * This program is free software: you can redistribute it and/or modify
@@ -16,45 +16,14 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "gfx.h";            // PROGMEM Graphics
 #include <string.h>
 #include <Adafruit_GFX.h>    // Adafruit Core graphics library
 #include <Adafruit_TFTLCD.h> // Adafruit Hardware-specific library
 #include <TouchScreen.h>
-
-#if defined(__SAM3X8E__)
-    #undef __FlashStringHelper::F(string_literal)
-    #define F(string_literal) string_literal
-#endif
-
-// Keyestudio 2.8" LCD Shield Hardware
-#define LCD_CS      A3 // Pin Chip Select (Shared with Touch)
-#define LCD_CD      A2 // Command/Data (Shared with Touch)
-#define LCD_WR      A1 // LCD Write
-#define LCD_RD      A0 // LCD Read
-#define LCD_RESET   A4 // Can alternately just connect to Arduino's reset pin
-#define TOUCH_YP    A3 // Pin Y+ (analog only: An) (Shared with LCD)
-#define TOUCH_XM    A2 // Pin M- (analog only: An) (Shared with LCD)
-#define TOUCH_YM     9 // Pin Y-
-#define TOUCH_XP     8 // Pin X+
-#define TOUCH_OHM  300 // Measured touch resistance in Ohms
-#define TS_MINP     10 // Min Input Pressure
-#define TS_MAXP   1000 // Max Input Preasure
-#define TS_MINX    150 // Touch Min X Position
-#define TS_MINY    170 // Touch Min Y Position
-#define TS_MAXX    920 // Touch Max X Position
-#define TS_MAXY    960 // Touch Max Y Position
-#define TS_DEBO     50 // Touch controls debounce (Noisy touch?)
-
-// Matrix Screen Adjustments
-#define T_SELS  0.12 // Multiplier (12% of screen)
-#define T_SELP  2    // Selector padding (Pixels)
-#define T_PIXS  6    // Pixel size (Pixels)
-#define T_PIXG  1    // Pixel padding (Pixels)
-#define T_BUTP  5    // Touch controls padding (Pixels)
+#include "gfx.h";            // Graphics Function
 
 // Timing Settings
-#define T_TICK  0.25    // Loops of game code per second
+#define T_TICK  0.025   // Loops of game code per second
 #define T_FPS   2       // Frames per second
 
 // Gameplay Settings
@@ -75,73 +44,6 @@
 #define ENABLE_CLEAN    32
 #define WASTE_SICK     256
 
-
-// Animation ID
-#define IDLE_EGG        0
-#define IDLE_BABY       1
-#define IDLE_MATURE     2
-#define SLEEP_BABY      3
-#define SLEEP_MATURE    4
-#define OVERLAY_CLEAN   5
-#define OVERLAY_EXLAIM  6
-#define OVERLAY_ZZZ     7
-#define OVERLAY_DEAD    8
-#define OVERLAY_EAT     9
-#define OVERLAY_STINK  10
-#define DISPLAY_HUNGER 11
-#define DISPLAY_ENERGY 12
-#define DISPLAY_WASTE  13
-#define DISPLAY_AGE    14
-#define DISPLAY_BACK   15
-
-struct tama_state {
-  bool alive;
-  bool eat;
-  bool sleep;
-  bool stink;
-  bool warn;
-  bool clean;
-};
-
-struct tama_pet {
-   uint16_t hunger;
-   uint16_t energy;
-   uint16_t waste;
-   int16_t  happiness;
-   uint16_t age;
-   uint8_t  stage;
-   struct   tama_state state;
-};
-
-struct tama_display {
-   int8_t selector;
-   bool   in_stat;
-   int8_t sel_stat;
-   int8_t offset;
-   int8_t animation;
-   int8_t aframe;
-   int8_t overlay;
-   int8_t oframe;
-};
-
-struct tama_pet pet;
-struct tama_display tdisp;
-
-Adafruit_TFTLCD tft(LCD_CS, LCD_CD, LCD_WR, LCD_RD, LCD_RESET);
-TouchScreen touch = TouchScreen(TOUCH_XP, TOUCH_YP, TOUCH_XM, TOUCH_YM, TOUCH_OHM);
-
-// Debounce Variables
-int  btn_cstate[3] = {0, 0, 0}; // Current button state
-int  btn_lstate[3] = {0, 0, 0}; // Previous button state
-long btn_tstate[3] = {0, 0, 0}; // Time of last state change
-
-// Display Variables
-int lcd_w = 0; // LCD Width
-int lcd_h = 0; // LCD Height
-
-// System Timing Variables
-long lastTick = 0;
-long lastFrame = 0;
 
 void setup(void) {
   Serial.begin(115200);
@@ -521,7 +423,22 @@ void loop(void) {
   processTouch(); // Process Touch Events
   //libtama_display(false);
   // Process menu
-
+  if(millis() - lastTick > (1000 / T_TICK)) { // If its time for tick
+    Serial.print(F("Debug: AGE:"));
+    Serial.print(pet.age);
+    Serial.print(F(" STAGE:"));
+    Serial.print(pet.stage);
+    Serial.print(F(" ENERGY:"));
+    Serial.print(pet.energy);
+    Serial.print(F(" HUNGER:"));
+    Serial.print(pet.hunger);
+    Serial.print(F(" WASTE:"));
+    Serial.print(pet.waste);
+    Serial.print(F(" HAPPINESS:"));
+    Serial.println(pet.happiness);
+    lastTick = millis(); // Record last tick time
+    libtama_tick(); // Execute tick
+  }
   // Process frame
   if(millis() - lastFrame > (1000 / T_FPS)) { // If its time for tick
     lastFrame = millis(); // Record last frame time
@@ -533,58 +450,10 @@ void loop(void) {
     if(tdisp.oframe == gfx_frames[OVERLAY_EAT] - 1) { // Last frame check
       pet.state.eat = false; // Stop eating
     }
-    if(millis() - lastTick > (1000 / T_TICK)) { // If its time for tick
-      Serial.print(F("Debug: AGE:"));
-      Serial.print(pet.age);
-      Serial.print(F(" STAGE:"));
-      Serial.print(pet.stage);
-      Serial.print(F(" ENERGY:"));
-      Serial.print(pet.energy);
-      Serial.print(F(" HUNGER:"));
-      Serial.print(pet.hunger);
-      Serial.print(F(" WASTE:"));
-      Serial.print(pet.waste);
-      Serial.print(F(" HAPPINESS:"));
-      Serial.println(pet.happiness);
-      lastTick = millis(); // Record last tick time
-      libtama_tick(); // Execute tick
-    }
     libtama_display(true);
   }
   delay(10); // delay 10ms 
 }
-
-void gfx_render() {
-  clearPixels(); // Clear Pixbuf
-  // Load graphics
-  if (tdisp.in_stat) {
-    switch(tdisp.sel_stat) {
-      case 0:
-        drawDisplay(DISPLAY_HUNGER);
-        break;
-      case 1:
-        drawDisplay(DISPLAY_ENERGY);
-        break;
-      case 2:
-        drawDisplay(DISPLAY_WASTE);
-        break;
-      case 3:
-        drawDisplay(DISPLAY_AGE);
-        break;
-      default:
-        gfx_loadPM(tdisp.animation, tdisp.aframe); // Get graphics into pixbuf
-    }
-  } else {
-    gfx_loadPM(tdisp.animation, tdisp.aframe); // Get graphics into pixbuf
-    if(tdisp.overlay > 0) { // Is an overlay enabled?
-      gfx_loadPM(tdisp.overlay, tdisp.oframe); // Get graphics into pixbuf
-    }
-    gfx_offset(tdisp.offset);
-  }
-  drawPixels(); // Render
-}
-
-
 
 void libtama_eat() {
   if (pet.hunger >= ENABLE_EAT && pet.state.alive && !pet.state.sleep && !pet.state.clean && pet.stage > 0) {
@@ -719,27 +588,82 @@ void gfx_offset(int8_t o) {
   }
 }
 
-void gfx_loadPM(int id, int frame) {
+void drawPixels() {
+  int cx = round((lcd_w - ((T_PIXS + T_PIXG) * 32)) / 2);
+  int cy = round(lcd_h * T_SELS);
+  int px, py, ppx;
+
+  for(py = 0; py < 32; py++) {
+    for(px = 0; px < 32; px++) {
+      ppx = calculateXByte(px);
+      if ((pixbuf[py][ppx] & (1 << (7 - (px - ppx * 8)))) != (disp[py][ppx] & (1 << (7 - (px - ppx * 8))))) { // Do we need to update this pixel?
+        if(pixbuf[py][ppx] & (1 << (7 - (px - ppx * 8)))) {
+          tft.fillRect(cx + (px * (T_PIXS + T_PIXG)), cy + (py * (T_PIXS + T_PIXG)), T_PIXS, T_PIXS, tft.color565(10, 12, 6));
+        } else {
+          tft.fillRect(cx + (px * (T_PIXS + T_PIXG)), cy + (py * (T_PIXS + T_PIXG)), T_PIXS, T_PIXS, tft.color565(156, 170, 125));
+        }
+      }
+    }
+    disp[py][0] = pixbuf[py][0];
+    disp[py][1] = pixbuf[py][1];
+    disp[py][2] = pixbuf[py][2];
+    disp[py][3] = pixbuf[py][3];
+  }
+}
+
+void setPixel(int x, int y, bool v) {
+  int px = calculateXByte(x);
+  if(v) {
+    pixbuf[y][px] |= 1 << (7 - (x - px * 8));
+  } else {
+    pixbuf[y][px] &= ~(1 << (7 - (x - px * 8)));
+  }
+}
+
+bool getPixel(int x, int y) {
+  int px = calculateXByte(x);
+  return(pixbuf[y][px] & (1 << (7 - (x - px * 8))));
+}
+
+void clearPixels() {
+  for (int y = 0; y < 32; y++) {
+    for (int x = 0; x < 4; x++) {
+      pixbuf[y][x] = 0x00;
+    }
+  }
+}
+
+// https://stackoverflow.com/questions/2602823/
+// Reverse right to left binary to left to right
+uint8_t reverse(uint8_t b) {
+   b = (b & 0xF0) >> 4 | (b & 0x0F) << 4;
+   b = (b & 0xCC) >> 2 | (b & 0x33) << 2;
+   b = (b & 0xAA) >> 1 | (b & 0x55) << 1;
+   return b;
+}
+
+void gfx_render() {
+  clearPixels(); // Clear Pixbuf
+  // Load graphics
+  if (tdisp.in_stat) {
+    drawDisplay(tdisp.sel_stat); // Draw status display screens
+  } else {
+    drawAnimation(tdisp.animation, tdisp.aframe); // Draw animation frame
+    if(tdisp.overlay > 0) { // Is an overlay enabled?
+      if(tdisp.overlay == OVERLAY_STINK)
+        gfx_offset(random(-1, 1));
+      drawOverlay(tdisp.overlay, tdisp.oframe); // Get graphics into pixbuf
+    }
+    gfx_offset(tdisp.offset);
+  }
+  drawPixels(); // Render
+}
+
+void drawOverlay(int id, int frame) {
   int x, y;
-  uint8_t t;
   for (y = 0; y < 32; y++) {
     for (x = 0; x < 4; x++) {
       switch(id) {
-        case IDLE_EGG: // Idle Egg [2 frames]
-          pixbuf[y][x] |= reverse(pgm_read_byte(&(gfx_idleEgg[frame][y][x])));
-          break;
-        case IDLE_BABY: // Idle Baby [2 frames]
-          pixbuf[y][x] |= reverse(pgm_read_byte(&(gfx_idleBaby[frame][y][x])));
-          break;
-        case IDLE_MATURE: // Idle Mature [2 frames]
-          pixbuf[y][x] |= reverse(pgm_read_byte(&(gfx_idleMature[frame][y][x])));
-          break;
-        case SLEEP_BABY: // Sleep Baby [2 frames]
-          pixbuf[y][x] |= reverse(pgm_read_byte(&(gfx_sleepBaby[frame][y][x])));
-          break;
-        case SLEEP_MATURE: // Sleep Mature [2 frames]
-          pixbuf[y][x] |= reverse(pgm_read_byte(&(gfx_sleepMature[frame][y][x])));
-          break;
         case OVERLAY_CLEAN: // Overlay Clean [1 frame]
           pixbuf[y][x] |= reverse(pgm_read_byte(&(gfx_overlayClean[frame][y][x])));
           break;
@@ -763,85 +687,201 @@ void gfx_loadPM(int id, int frame) {
   }
 }
 
-
-void drawPixels() {
-  int cx = round((lcd_w - ((T_PIXS + T_PIXG) * 32)) / 2);
-  int cy = round(lcd_h * T_SELS);
-  int px, py, ppx;
-
-  for(py = 0; py < 32; py++) {
-    for(px = 0; px < 32; px++) {
-      if (px < 8){
-        ppx = 0;
-      } else if (px < 16){
-        ppx = 1;
-      } else if (px < 24){
-        ppx = 2;
-      } else {
-        ppx = 3;
+void drawAnimation(int id, int frame) {
+  int xx, yy, px;
+  switch(id) {
+    case IDLE_EGG: // Display Hunger
+      for (yy = 0; yy < 12; yy++) {
+        for (xx = 0; xx < 32; xx++) {
+          px = calculateXByte(xx);
+          if(frame == 0) {
+            pixbuf[19 + yy][px] |= reverse(pgm_read_byte(&(gfx_idleEgg[0][yy][px])));
+          } else {
+            pixbuf[19 + yy][px] |= reverse(pgm_read_byte(&(gfx_idleEgg[1][yy][px])));
+          }
+        }
       }
-      if ((pixbuf[py][ppx] & (1 << (7 - (px - ppx * 8)))) != (disp[py][ppx] & (1 << (7 - (px - ppx * 8))))) { // Do we need to update this pixel?
-        if(pixbuf[py][ppx] & (1 << (7 - (px - ppx * 8)))) {
-          tft.fillRect(cx + (px * (T_PIXS + T_PIXG)), cy + (py * (T_PIXS + T_PIXG)), T_PIXS, T_PIXS, tft.color565(10, 12, 6));
-        } else {
-          tft.fillRect(cx + (px * (T_PIXS + T_PIXG)), cy + (py * (T_PIXS + T_PIXG)), T_PIXS, T_PIXS, tft.color565(156, 170, 125));
+      break;
+    case IDLE_BABY: // Display Hunger
+      for (yy = 0; yy < 7; yy++) {
+        for (xx = 0; xx < 32; xx++) {
+          px = calculateXByte(xx);
+          if(frame == 0) {
+            pixbuf[24 + yy][px] |= reverse(pgm_read_byte(&(gfx_idleBaby[0][yy][px])));
+          } else {
+            pixbuf[24 + yy][px] |= reverse(pgm_read_byte(&(gfx_idleBaby[1][yy][px])));
+          }
+        }
+      }
+      break;
+    case IDLE_MATURE: // Display Hunger
+      for (yy = 0; yy < 10; yy++) {
+        for (xx = 0; xx < 32; xx++) {
+          px = calculateXByte(xx);
+          if(frame == 0) {
+            pixbuf[9 + yy][px] |= reverse(pgm_read_byte(&(gfx_idleMature[0][yy][px])));
+          } else {
+            pixbuf[9 + yy][px] |= reverse(pgm_read_byte(&(gfx_idleMature[1][yy][px])));
+          }
+        }
+      }
+      break;
+    case SLEEP_BABY: // Display Hunger
+      for (yy = 0; yy < 3; yy++) {
+        for (xx = 0; xx < 32; xx++) {
+          px = calculateXByte(xx);
+          if(frame == 0) {
+            pixbuf[28 + yy][px] |= reverse(pgm_read_byte(&(gfx_sleepBaby[0][yy][px])));
+          } else {
+            pixbuf[28 + yy][px] |= reverse(pgm_read_byte(&(gfx_sleepBaby[1][yy][px])));
+          }
+        }
+      }
+      break;
+    case SLEEP_MATURE: // Display Hunger
+      for (yy = 0; yy < 4; yy++) {
+        for (xx = 0; xx < 32; xx++) {
+          px = calculateXByte(xx);
+          if(frame == 0) {
+            pixbuf[27 + yy][px] |= reverse(pgm_read_byte(&(gfx_sleepMature[0][yy][px])));
+          } else {
+            pixbuf[27 + yy][px] |= reverse(pgm_read_byte(&(gfx_sleepMature[1][yy][px])));
+          }
+        }
+      }
+      break;
+  }
+}
+
+void drawDisplay(int id) {
+  int xx, yy, px;
+  uint8_t p;
+  switch(id) {
+    case DISPLAY_HUNGER: // Display Hunger
+      for (yy = 0; yy < ifo_Hunger[1]; yy++) {
+        for (xx = 0; xx < ifo_Hunger[0]; xx++) {
+          px = calculateXByte(xx);
+          pixbuf[2 + yy][px] |= reverse(pgm_read_byte(&(gfx_Hunger[yy][px])));
+        }
+      }
+      for (yy = 0; yy < ifo_Progress[1]; yy++) {
+        for (xx = 0; xx < ifo_Progress[0]; xx++) {
+          px = calculateXByte(xx);
+          pixbuf[11 + yy][px] |= pgm_read_byte(&(gfx_Progress[yy][px]));
+        }
+      }
+      p = map(pet.hunger, 0, HUNGER_DEATH, 0, 27) & 0x1F;
+      break;    
+    case DISPLAY_ENERGY: // Display Energy
+      for (yy = 0; yy < ifo_Energy[1]; yy++) {
+        for (xx = 0; xx < ifo_Energy[0]; xx++) {
+          px = calculateXByte(xx);
+          pixbuf[2 + yy][px] |= reverse(pgm_read_byte(&(gfx_Energy[yy][px])));
+        }
+      }
+      for (yy = 0; yy < ifo_Progress[1]; yy++) {
+        for (xx = 0; xx < ifo_Progress[0]; xx++) {
+          px = calculateXByte(xx);
+          pixbuf[11 + yy][px] |= pgm_read_byte(&(gfx_Progress[yy][px]));
+        }
+      }
+      p = map(pet.energy, FORCE_SLEEP, 256, 0, 27) & 0x1F;
+      break;
+    case DISPLAY_WASTE: // Display Waste
+      for (yy = 0; yy < ifo_Age[1]; yy++) {
+        for (xx = 0; xx < ifo_Age[0]; xx++) {
+          px = calculateXByte(xx);
+          pixbuf[2 + yy][px] |= reverse(pgm_read_byte(&(gfx_Waste[yy][px])));
+        }
+      }
+      for (yy = 0; yy < ifo_Progress[1]; yy++) {
+        for (xx = 0; xx < ifo_Progress[0]; xx++) {
+          px = calculateXByte(xx);
+          pixbuf[11 + yy][px] |= pgm_read_byte(&(gfx_Progress[yy][px]));
+        }
+      }
+      p = map(pet.waste, 0, WASTE_SICK, 0, 27) & 0x1F;
+      break;
+    case DISPLAY_AGE: // Display Age
+      for (yy = 0; yy < ifo_Age[1]; yy++) {
+        for (xx = 0; xx < ifo_Age[0]; xx++) {
+          px = calculateXByte(xx);
+          pixbuf[2 + yy][px] |= reverse(pgm_read_byte(&(gfx_Age[yy][px])));
+        }
+      }
+      for (yy = 0; yy < ifo_Progress[1]; yy++) {
+        for (xx = 0; xx < ifo_Progress[0]; xx++) {
+          px = calculateXByte(xx);
+          pixbuf[11 + yy][px] |= pgm_read_byte(&(gfx_Progress[yy][px]));
+        }
+      }
+      p = map(pet.age, 0, AGE_DEATH, 0, 27);
+      break;
+  }
+  for(int i = 0; i < p; i++) {
+    setPixel(3 + i, 12, true);
+    setPixel(3 + i, 13, true);
+    setPixel(3 + i, 14, true);
+    setPixel(3 + i, 15, true);
+    setPixel(3 + i, 16, true); 
+  }
+  
+      
+ 
+      loadGlyph35('h', 4, 20);
+      loadGlyph35('e', 8, 20);
+      loadGlyph35('l', 12, 20);
+      loadGlyph35('l', 16, 20);
+      loadGlyph35('o', 20, 20);
+  /*
+      //loadGlyph35('y', 24, 20);
+      //loadGlyph35('y', 28, 20);
+      
+      loadGlyph35('1', 0, 6);
+      loadGlyph35('0', 4, 6);
+      loadGlyph35('0', 8, 6);
+      //Space = x+1
+      loadGlyph35('b', 13, 6);
+      loadGlyph35('y', 17, 6);
+      loadGlyph35('t', 21, 6);
+      loadGlyph35('e', 25, 6);
+      loadGlyph35('!', 29, 6);
+
+      loadGlyph35('f', 0, 12);
+      loadGlyph35('o', 4, 12);
+      loadGlyph35('n', 8, 12);
+      loadGlyph35('t', 12, 12);
+      //Space = x+1
+      loadGlyph35('d', 17, 12);
+      loadGlyph35('o', 21, 12);
+      loadGlyph35('n', 25, 12);
+      loadGlyph35('e', 29, 12);
+      break;
+      */
+}
+
+void loadXGlyph35(int dx, int dy, int w, int h, int bb, int xb, int yb) {
+  int xx, yy, b, xc, bc, yc; // Y track, y byte, x byte, begin bit
+  for (yy = 0; yy < h; yy++) {
+    bc = bb; // current bit = begin bit
+    xc = xb; // x current = original x byte
+    yc = yb; // y current = y byte (untested)
+    
+    for (xx = 0; xx < w; xx++) {
+      b = pgm_read_byte(&(font_UE3X5[(yc * h) + yy][xc])); // Grab Bytes
+      setPixel(dx + xx, dy + yy, (b & (1 << (7 - bc)))); // Set our pixel
+      bc++;
+      // Prepare for next loop
+      if (bc > 7) { // If we are over begin bit 7
+        bc = 0; // set 0
+        xc++; // increment x byte
+        if (xc > 3) { // If we are over byte 3
+          xc = 0; // set 0
+          yc++; // increment x byte
         }
       }
     }
-    disp[py][0] = pixbuf[py][0];
-    disp[py][1] = pixbuf[py][1];
-    disp[py][2] = pixbuf[py][2];
-    disp[py][3] = pixbuf[py][3];
   }
-}
-
-void setPixel(int x, int y, bool v) {
-  int px;
-  if (x < 8){
-    px = 0;
-  } else if (x < 16){
-    px = 1;
-  } else if (x < 24){
-    px = 2;
-  } else {
-    px = 3;
-  }
-  if(v) {
-    pixbuf[y][px] |= 1 << (7 - (x - px * 8));
-  } else {
-    pixbuf[y][px] &= ~(1 << (7 - (x - px * 8)));
-  }
-}
-
-bool getPixel(int x, int y) {
-  int px;
-  if (x < 8){
-    px = 0;
-  } else if (x < 16) {
-    px = 1;
-  } else if (x < 24) {
-    px = 2;
-  } else {
-    px = 3;
-  }
-  return(pixbuf[y][px] & (1 << (7 - (x - px * 8))));
-}
-
-void clearPixels() {
-  for (int y = 0; y < 32; y++) {
-    for (int x = 0; x < 4; x++) {
-      pixbuf[y][x] = 0x00;
-    }
-  }
-}
-
-// https://stackoverflow.com/questions/2602823/
-// Reverse right to left binary to left to right
-uint8_t reverse(uint8_t b) {
-   b = (b & 0xF0) >> 4 | (b & 0x0F) << 4;
-   b = (b & 0xCC) >> 2 | (b & 0x33) << 2;
-   b = (b & 0xAA) >> 1 | (b & 0x55) << 1;
-   return b;
 }
 
 void loadGlyph35(char c, int x, int y) {
@@ -998,195 +1038,11 @@ void loadGlyph35(char c, int x, int y) {
   }
 }
 
-void drawDisplay(int id) {
-  int xx, yy, px;
-  uint8_t p;
-  switch(id) {
-    case DISPLAY_HUNGER: // Display Hunger
-      for (yy = 0; yy < ifo_Hunger[1]; yy++) {
-        for (xx = 0; xx < ifo_Hunger[0]; xx++) {
-          if (xx < 8){
-            px = 0;
-          } else if (xx < 16) {
-            px = 1;
-          } else if (xx < 24) {
-            px = 2;
-          } else {
-            px = 3;
-          }
-          pixbuf[2 + yy][px] |= reverse(pgm_read_byte(&(gfx_Hunger[yy][px])));
-        }
-      }
-      for (yy = 0; yy < ifo_Progress[1]; yy++) {
-        for (xx = 0; xx < ifo_Progress[0]; xx++) {
-          if (xx < 8){
-            px = 0;
-          } else if (xx < 16) {
-            px = 1;
-          } else if (xx < 24) {
-            px = 2;
-          } else {
-            px = 3;
-          }
-          pixbuf[11 + yy][px] |= pgm_read_byte(&(gfx_Progress[yy][px]));
-        }
-      }
-      p = map(pet.hunger, 0, HUNGER_DEATH, 0, 27);
-      break;    
-    case DISPLAY_ENERGY: // Display Energy
-      for (yy = 0; yy < ifo_Energy[1]; yy++) {
-        for (xx = 0; xx < ifo_Energy[0]; xx++) {
-          if (xx < 8){
-            px = 0;
-          } else if (xx < 16) {
-            px = 1;
-          } else if (xx < 24) {
-            px = 2;
-          } else {
-            px = 3;
-          }
-          pixbuf[2 + yy][px] |= reverse(pgm_read_byte(&(gfx_Energy[yy][px])));
-        }
-      }
-      for (yy = 0; yy < ifo_Progress[1]; yy++) {
-        for (xx = 0; xx < ifo_Progress[0]; xx++) {
-          if (xx < 8){
-            px = 0;
-          } else if (xx < 16) {
-            px = 1;
-          } else if (xx < 24) {
-            px = 2;
-          } else {
-            px = 3;
-          }
-          pixbuf[11 + yy][px] |= pgm_read_byte(&(gfx_Progress[yy][px]));
-        }
-      }
-      p = map(pet.energy, FORCE_SLEEP, 256, 0, 27);
-      break;
-    case DISPLAY_WASTE: // Display Waste
-      for (yy = 0; yy < ifo_Age[1]; yy++) {
-        for (xx = 0; xx < ifo_Age[0]; xx++) {
-          if (xx < 8){
-            px = 0;
-          } else if (xx < 16) {
-            px = 1;
-          } else if (xx < 24) {
-            px = 2;
-          } else {
-            px = 3;
-          }
-          pixbuf[2 + yy][px] |= reverse(pgm_read_byte(&(gfx_Waste[yy][px])));
-        }
-      }
-      for (yy = 0; yy < ifo_Progress[1]; yy++) {
-        for (xx = 0; xx < ifo_Progress[0]; xx++) {
-          if (xx < 8){
-            px = 0;
-          } else if (xx < 16) {
-            px = 1;
-          } else if (xx < 24) {
-            px = 2;
-          } else {
-            px = 3;
-          }
-          pixbuf[11 + yy][px] |= pgm_read_byte(&(gfx_Progress[yy][px]));
-        }
-      }
-      p = map(pet.waste, 0, WASTE_SICK, 0, 27);
-      break;
-    case DISPLAY_AGE: // Display Age
-      for (yy = 0; yy < ifo_Age[1]; yy++) {
-        for (xx = 0; xx < ifo_Age[0]; xx++) {
-          if (xx < 8){
-            px = 0;
-          } else if (xx < 16) {
-            px = 1;
-          } else if (xx < 24) {
-            px = 2;
-          } else {
-            px = 3;
-          }
-          pixbuf[2 + yy][px] |= reverse(pgm_read_byte(&(gfx_Age[yy][px])));
-        }
-      }
-      for (yy = 0; yy < ifo_Progress[1]; yy++) {
-        for (xx = 0; xx < ifo_Progress[0]; xx++) {
-          if (xx < 8){
-            px = 0;
-          } else if (xx < 16) {
-            px = 1;
-          } else if (xx < 24) {
-            px = 2;
-          } else {
-            px = 3;
-          }
-          pixbuf[11 + yy][px] |= pgm_read_byte(&(gfx_Progress[yy][px]));
-        }
-      }
-      p = map(pet.age, 0, AGE_DEATH, 0, 27);
-      break;
+int calculateXByte(int l) {
+  int c = 0;
+  while(l > 7) {
+    c++;
+    l -= 8;
   }
-  for(int i = 0; i < p; i++) {
-    setPixel(3 + i, 12, true);
-    setPixel(3 + i, 13, true);
-    setPixel(3 + i, 14, true);
-    setPixel(3 + i, 15, true);
-    setPixel(3 + i, 16, true); 
-  }
-  /*
-      loadGlyph35('I', 0, 0);
-      //loadGlyph35(' ', 4, 0);
-      loadGlyph35('g', 5, 0);
-      loadGlyph35('o', 9, 0);
-      loadGlyph35('t', 13, 0);
-      //Space = x+1
-      loadGlyph35('m', 18, 0);
-      loadGlyph35('y', 22, 0);
-      
-      loadGlyph35('1', 0, 6);
-      loadGlyph35('0', 4, 6);
-      loadGlyph35('0', 8, 6);
-      //Space = x+1
-      loadGlyph35('b', 13, 6);
-      loadGlyph35('y', 17, 6);
-      loadGlyph35('t', 21, 6);
-      loadGlyph35('e', 25, 6);
-      loadGlyph35('!', 29, 6);
-
-      loadGlyph35('f', 0, 12);
-      loadGlyph35('o', 4, 12);
-      loadGlyph35('n', 8, 12);
-      loadGlyph35('t', 12, 12);
-      //Space = x+1
-      loadGlyph35('d', 17, 12);
-      loadGlyph35('o', 21, 12);
-      loadGlyph35('n', 25, 12);
-      loadGlyph35('e', 29, 12);
-      break;
-      */
-}
-
-void loadXGlyph35(int dx, int dy, int w, int h, int bb, int xb, int yb) {
-  int xx, yy, b, xc, bc, yc; // Y track, y byte, x byte, begin bit
-  for (yy = 0; yy < h; yy++) {
-    bc = bb; // current bit = begin bit
-    xc = xb; // x current = original x byte
-    yc = yb; // y current = y byte (untested)
-    
-    for (xx = 0; xx < w; xx++) {
-      b = pgm_read_byte(&(font_UE3X5[(yc * h) + yy][xc])); // Grab Bytes
-      setPixel(dx + xx, dy + yy, (b & (1 << (7 - bc)))); // Set our pixel
-      bc++;
-      // Prepare for next loop
-      if (bc > 7) { // If we are over begin bit 7
-        bc = 0; // set 0
-        xc++; // increment x byte
-        if (xc > 3) { // If we are over byte 3
-          xc = 0; // set 0
-          yc++; // increment x byte
-        }
-      }
-    }
-  }
+  return(c);
 }
