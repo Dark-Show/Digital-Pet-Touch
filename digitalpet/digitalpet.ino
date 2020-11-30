@@ -813,11 +813,11 @@ void drawDisplay(int id) {
       loadGlyph35('R', 10, 2);
       loadGlyph35('P', 14, 2);
       loadGlyph35('G', 18, 2);
-      
-      loadGlyph35('C', 0,  10);
-      loadGlyph35('O', 4,  10);
-      loadGlyph35('I', 8,  10);
-      loadGlyph35('N', 12, 10);
+
+      // Coins
+      loadGlyph35('5', 2,  8);
+      linePixels(3, 7, 3, 13, 1);
+      // Coints Numeric Reading
       itoa(pet.rpg.coins, snum, 10); // int to base 10 string
 
       // count digits
@@ -826,8 +826,59 @@ void drawDisplay(int id) {
           break;
       }
       for (i = 0; i < x; i++) {
-        loadGlyph35(snum[i], ((5 - x) * 4) + (i * 4) + 13, 10);
+        loadGlyph35(snum[i], ((5 - x) * 4) + (i * 4) + 13, 8);
       }
+
+      // Luck
+      loadGlyph35('L', 2,  15);
+      loadGlyph35('U', 6,  15);
+      loadGlyph35('C', 10,  15);
+      loadGlyph35('K', 14,  15);
+      // Coints Numeric Reading
+      itoa(pet.rpg.luck, snum, 10); // int to base 10 string
+
+      // count digits
+      for (x = 0; x < 5; x++) {
+        if(snum[x] == 0x00)
+          break;
+      }
+      for (i = 0; i < x; i++) {
+        loadGlyph35(snum[i], ((5 - x) * 4) + (i * 4) + 13, 15);
+      }
+
+      // Attack
+      loadGlyph35('A', 2,  21);
+      loadGlyph35('T', 6,  21);
+      loadGlyph35('T', 10,  21);
+      // Coints Numeric Reading
+      itoa(pet.rpg.attack, snum, 10); // int to base 10 string
+
+      // count digits
+      for (x = 0; x < 5; x++) {
+        if(snum[x] == 0x00)
+          break;
+      }
+      for (i = 0; i < x; i++) {
+        loadGlyph35(snum[i], ((5 - x) * 4) + (i * 4) + 13, 21);
+      }
+
+      // Defense
+      loadGlyph35('D', 2,  27);
+      loadGlyph35('E', 6,  27);
+      loadGlyph35('F', 10,  27);
+      // Coints Numeric Reading
+      itoa(pet.rpg.defense, snum, 10); // int to base 10 string
+
+      // count digits
+      for (x = 0; x < 5; x++) {
+        if(snum[x] == 0x00)
+          break;
+      }
+      for (i = 0; i < x; i++) {
+        loadGlyph35(snum[i], ((5 - x) * 4) + (i * 4) + 13, 27);
+      }
+
+      
       break;
   }
   if (id != DISPLAY_RPG) {
