@@ -24,13 +24,6 @@
 #define TFTWIDTH 240
 #define TFTHEIGHT 320
 
-// LCD controller chip identifiers
-#define ID_932X 0
-#define ID_7575 1
-#define ID_9341 2
-#define ID_HX8357D 3
-#define ID_UNKNOWN 0xFF
-
 #include "registers.h"
 
 // Constructor for breakout board (configurable LCD control lines).
@@ -224,14 +217,13 @@ static const uint16_t ILI932x_regValues[] PROGMEM = {
     0x0133, // Main screen turn on
 };
 
-void TFTLCD_ILI932x::begin(uint16_t id) {
+void TFTLCD_ILI932x::begin() {
   uint8_t i = 0;
 
   reset();
 
   delay(200);
   uint16_t a, d;
-  driver = ID_932X;
   CS_ACTIVE;
   while (i < sizeof(ILI932x_regValues) / sizeof(uint16_t)) {
     a = pgm_read_word(&ILI932x_regValues[i++]);

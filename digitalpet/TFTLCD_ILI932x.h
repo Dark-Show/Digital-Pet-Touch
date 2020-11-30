@@ -25,7 +25,7 @@ public:
   TFTLCD_ILI932x(uint8_t cs, uint8_t cd, uint8_t wr, uint8_t rd, uint8_t rst);
   TFTLCD_ILI932x(void);
 
-  void begin(uint16_t id = 0x9325);
+  void begin();
   void drawPixel(int16_t x, int16_t y, uint16_t color);
   void drawFastHLine(int16_t x0, int16_t y0, int16_t w, uint16_t color);
   void drawFastVLine(int16_t x0, int16_t y0, int16_t h, uint16_t color);

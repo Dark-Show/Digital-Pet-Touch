@@ -1,5 +1,5 @@
 /*
- * Digitial Pet Touch - C port of Tamagotchi Emulator by ryesalvador: https://gist.github.com/ryesalvador/e88cb2b4bbe0694d175ef2d7338abd07
+ * Digital Pet Touch - Based on Python Emulator by ryesalvador: https://gist.github.com/ryesalvador/e88cb2b4bbe0694d175ef2d7338abd07
  * Copyright (C) 2020 Greg Michalik
  * 
  * This program is free software: you can redistribute it and/or modify
@@ -15,39 +15,10 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#if defined(__SAM3X8E__)
-    #undef __FlashStringHelper::F(string_literal)
-    #define F(string_literal) string_literal
-#endif
-
-#ifdef KEYESTUDIO28LCD
-// Keyestudio 2.8" LCD Shield Hardware
-#include <TouchScreen.h> // Adafruit touchscreen
-#include "TFTLCD_ILI932x.h" // Cutdown Adafruit library
-#define LCD_CS      A3 // Pin Chip Select (Shared with Touch)
-#define LCD_CD      A2 // Command/Data (Shared with Touch)
-#define LCD_WR      A1 // LCD Write
-#define LCD_RD      A0 // LCD Read
-#define LCD_RESET   A4 // Can alternately just connect to Arduino's reset pin
-#define TOUCH_YP    A3 // Pin Y+ (analog only: An) (Shared with LCD)
-#define TOUCH_XM    A2 // Pin M- (analog only: An) (Shared with LCD)
-#define TOUCH_YM     9 // Pin Y-
-#define TOUCH_XP     8 // Pin X+
-#define TOUCH_OHM  300 // Measured touch resistance in Ohms
-#define TS_MINP     10 // Min Input Pressure
-#define TS_MAXP   1000 // Max Input Preasure
-#define TS_MINX    150 // Touch Min X Position
-#define TS_MINY    170 // Touch Min Y Position
-#define TS_MAXX    920 // Touch Max X Position
-#define TS_MAXY    960 // Touch Max Y Position
-#define TS_DEBO     50 // Touch controls debounce (Noisy touch?)
-
-TFTLCD_ILI932x tft(LCD_CS, LCD_CD, LCD_WR, LCD_RD, LCD_RESET);
-#endif
 
 // Timing Settings
-#define T_TICK  16   // Loops of game code per second
-#define T_FPS   2       // Frames per second
+#define T_TICK  16 // Loops of game code per second
+#define T_FPS   2  // Frames per second
 
 // Gameplay Settings
 #define AGE_MOVE        64
@@ -67,9 +38,10 @@ TFTLCD_ILI932x tft(LCD_CS, LCD_CD, LCD_WR, LCD_RD, LCD_RESET);
 #define ENABLE_CLEAN    32
 #define WASTE_SICK     256
 
-#define EXPLORE_HIDE    32
 // 16 (low chance of level 2 reach
 // 32 (low chance of level 6 reach
+#define EXPLORE_HIDE    32
+
 
 // Matrix Screen Adjustments
 #define T_SELS  0.12 // Multiplier (12% of screen)
@@ -96,6 +68,11 @@ TFTLCD_ILI932x tft(LCD_CS, LCD_CD, LCD_WR, LCD_RD, LCD_RESET);
 #define DISPLAY_ENERGY 1
 #define DISPLAY_WASTE  2
 #define DISPLAY_AGE    3
+
+#if defined(__SAM3X8E__)
+    #undef __FlashStringHelper::F(string_literal)
+    #define F(string_literal) string_literal
+#endif
 
 struct tama_state {
   bool alive;
@@ -140,8 +117,6 @@ struct tama_display {
 
 struct tama_pet pet;
 struct tama_display tdisp;
-
-TouchScreen touch = TouchScreen(TOUCH_XP, TOUCH_YP, TOUCH_XM, TOUCH_YM, TOUCH_OHM);
 
 // Debounce Variables
 int  btn_cstate[3] = {0, 0, 0}; // Current button state
@@ -741,7 +716,7 @@ const uint8_t font_UE3X5[25][4] PROGMEM = {{0b11111011, 0b11101111, 0b11111101, 
                                            {0b10111111, 0b11111111, 0b00111101, 0b11111100}, // ABCDEFGHIJ (3x5)
                                                 
                                            {0b10110010, 0b11010101, 0b11010110, 0b01111100}, // KLMNOPQRST (3x5)
-                                           {0b10110011, 0b11011011, 0b01101101, 0b10001000}, // KLMNOPQRST (3x5)
+                                           {0b10110011, 0b11111011, 0b01101101, 0b10001000}, // KLMNOPQRST (3x5)
                                            {0b11010010, 0b11111011, 0b11101110, 0b11101000}, // KLMNOPQRST (3x5)
                                            {0b10110010, 0b11111011, 0b00111101, 0b00101000}, // KLMNOPQRST (3x5)
                                            {0b10111110, 0b11010101, 0b00011101, 0b11001000}, // KLMNOPQRST (3x5)

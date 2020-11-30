@@ -1,5 +1,5 @@
 /*
- * Digital Pet Touch - C port of petgotchi Emulator by ryesalvador: https://gist.github.com/ryesalvador/e88cb2b4bbe0694d175ef2d7338abd07            
+ * Digital Pet Touch - Based on Python Emulator by ryesalvador: https://gist.github.com/ryesalvador/e88cb2b4bbe0694d175ef2d7338abd07            
  * Copyright (C) 2020 Greg Michalik
  * 
  * This program is free software: you can redistribute it and/or modify
@@ -16,9 +16,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#define KEYESTUDIO28LCD  // Keyestudio 2.8" LCD Shield
 
-#define KEYESTUDIO28LCD // Keyestudio 2.8" LCD Shield
-#include "digitalpet.h";   // Graphics
+#include "pet_gfx.h";    // After graphics are defined
+#include "digitalpet.h";
 
 void setup(void) {
   Serial.begin(115200);
@@ -41,6 +42,7 @@ void setup(void) {
       Serial.print(F("LCD Unknown ("));
       Serial.print(identifier, HEX);
       Serial.println(")");
+      
       while(1) {
         delay(100);
       }
@@ -48,7 +50,7 @@ void setup(void) {
 
   lcd_w = tft.width();
   lcd_h = tft.height();
-  tft.begin(identifier);
+  tft.begin();
   
   // Draw in-active region
   drawInactive();
@@ -173,7 +175,7 @@ void processTouch() {
   int i; // Temp Variable
   int ay = round(lcd_h * T_SELS) + ((T_PIXS + T_PIXG) * 32) + T_BUTP; // Calculate active y
   int bsize = round(lcd_w / 3); // button size
-  
+#ifdef _ADAFRUIT_TOUCHSCREEN_H_
   TSPoint p = touch.getPoint(); // Get Touch Point
   pinMode(TOUCH_XM, OUTPUT); // Restore Direction (Shared)
   pinMode(TOUCH_YP, OUTPUT); // Restore Direction (Shared)
@@ -209,6 +211,7 @@ void processTouch() {
   } else {
     randomSeed(p.x); // Update random seed often
   }
+#endif
   
   for (i = 0; i < 3; i++) { // Process each button
     if (btn_istate[i] != btn_lstate[i]) {  // if our state has changed
@@ -452,12 +455,9 @@ void libpet_clean() {
   if (pet.waste >= ENABLE_CLEAN && pet.state.alive && !pet.state.sleep && !pet.state.eat && pet.stage > 0) {
     tdisp.oframe = 0;
     pet.state.clean = true;
-    for (int i = 0; i < 32; i++) {
-      tdisp.offset = i;
-      libpet_display(false);
-      gfx_render();
-      delay((2000 / 32) / T_FPS);
-    }
+    libpet_display(false);
+    gfx_render();
+    doShiftTransition(1);
     tdisp.offset = 0;
     pet.waste = 0;
     pet.state.clean = false;
@@ -540,7 +540,7 @@ void libpet_display(bool increment){
   }
 }
 
-void setOffset(int8_t o) {
+void doOffset(int8_t o) {
   int8_t x, y;
   for (y = 0; y < 32; y++) {
     if(o < 0) { // Shift Left
@@ -634,10 +634,10 @@ void gfx_render() {
     drawAnimation(tdisp.animation, tdisp.aframe); // Draw animation frame
     if(tdisp.overlay > 0) { // Is an overlay enabled?
       if(tdisp.overlay == OVERLAY_STINK)
-        setOffset(random(-1, 1));
+        doOffset(random(-1, 1));
       drawOverlay(tdisp.overlay, tdisp.oframe); // Get graphics into pixbuf
     }
-    setOffset(tdisp.offset);
+    doOffset(tdisp.offset);
   }
   drawPixels(); // Render
 }
@@ -693,7 +693,7 @@ void drawOverlay(int id, int frame) {
 void drawAnimation(int id, int frame) {
   int xx, yy, px;
   switch(id) {
-    case IDLE_EGG: // Display Hunger
+    case IDLE_EGG:
       for (yy = 0; yy < 12; yy++) {
         for (xx = 0; xx < 32; xx++) {
           px = calculateXByte(xx);
@@ -705,7 +705,7 @@ void drawAnimation(int id, int frame) {
         }
       }
       break;
-    case IDLE_BABY: // Display Hunger
+    case IDLE_BABY:
       for (yy = 0; yy < 7; yy++) {
         for (xx = 0; xx < 32; xx++) {
           px = calculateXByte(xx);
@@ -717,7 +717,7 @@ void drawAnimation(int id, int frame) {
         }
       }
       break;
-    case IDLE_MATURE: // Display Hunger
+    case IDLE_MATURE:
       for (yy = 0; yy < 10; yy++) {
         for (xx = 0; xx < 32; xx++) {
           px = calculateXByte(xx);
@@ -729,7 +729,7 @@ void drawAnimation(int id, int frame) {
         }
       }
       break;
-    case SLEEP_BABY: // Display Hunger
+    case SLEEP_BABY:
       for (yy = 0; yy < 3; yy++) {
         for (xx = 0; xx < 32; xx++) {
           px = calculateXByte(xx);
@@ -741,7 +741,7 @@ void drawAnimation(int id, int frame) {
         }
       }
       break;
-    case SLEEP_MATURE: // Display Hunger
+    case SLEEP_MATURE:
       for (yy = 0; yy < 4; yy++) {
         for (xx = 0; xx < 32; xx++) {
           px = calculateXByte(xx);
@@ -759,6 +759,11 @@ void drawAnimation(int id, int frame) {
 void drawDisplay(int id) {
   int xx, yy, px;
   uint8_t p;
+  
+  uint8_t x = 0, i = 0;
+  char snum[5];
+  
+  
   switch(id) {
     case DISPLAY_HUNGER: // Display Hunger
       for (yy = 0; yy < ifo_Hunger[1]; yy++) {
@@ -768,8 +773,28 @@ void drawDisplay(int id) {
         }
       }
       p = map(pet.hunger, 0, HUNGER_DEATH, 0, 27) & 0x1F;
-      break;    
-    case DISPLAY_ENERGY: // Display Energy
+      break;
+    case DISPLAY_ENERGY: // Display RPG
+      loadGlyph35('R', 10, 2);
+      loadGlyph35('P', 14, 2);
+      loadGlyph35('G', 18, 2);
+      
+      loadGlyph35('C', 0,  10);
+      loadGlyph35('O', 4,  10);
+      loadGlyph35('I', 8,  10);
+      loadGlyph35('N', 12, 10);
+      itoa(pet.rpg.coins, snum, 10); // int to base 10 string
+
+      // count digits
+      for (x = 0; x < 5; x++) {
+        if(snum[x] == 0x00)
+          break;
+      }
+      for (i = 0; i < x; i++) {
+        loadGlyph35(snum[i], ((5 - x) * 4) + (i * 4) + 13, 10);
+      }
+      break;
+    case DISPLAY_ENERGY+22: // Display Energy
       for (yy = 0; yy < ifo_Energy[1]; yy++) {
         for (xx = 0; xx < ifo_Energy[0]; xx++) {
           px = calculateXByte(xx);
@@ -805,11 +830,81 @@ void drawDisplay(int id) {
       }
       break;
   }
-  linePixels( 3, 11, 28, 11, 1);  // top
-  linePixels( 3, 17, 28, 17, 1);  // bottom
-  linePixels( 2, 12,  2, 16, 1);  // left
-  linePixels(29, 12, 29, 16, 1);  // right
-  rectPixels(3, 12, p, 5, 1, 1); // Fill in progress bar
+  if (id != DISPLAY_ENERGY) {
+    // Draw progress bar
+    linePixels( 3, 11, 28, 11, 1); // top
+    linePixels( 3, 17, 28, 17, 1); // bottom
+    linePixels( 2, 12,  2, 16, 1); // left
+    linePixels(29, 12, 29, 16, 1); // right
+    
+    rectPixels(3, 12,  p,  5, 1, 1); // Fill in progress bar
+  }
+}
+
+void rectPixels(int8_t x, int8_t y, int8_t w, int16_t h, bool value, bool fill) {
+  if (fill) { // Draw one horizonal line per pixel height.
+    for(uint8_t i = 0; i < h; i++) {
+      linePixels(x, y + i, x + w - 1, y + i, value);
+    }    
+  } else { // Draw outline of square
+    linePixels(x, y, x + w - 1, y, value); // top
+    linePixels(x, y + h - 1, x + w - 1, y + h - 1, value); // bottom
+    linePixels(x, y, x, y + h -1, value); // left
+    linePixels(x + w - 1, y, x + w - 1, y + h - 1, value); // right
+  }
+}
+
+// Adapted from adafruit GFX library, which is based on Bresenham's line algorithm
+void linePixels(int8_t x0, int8_t y0, int8_t x1, int16_t y1, bool value) {
+  int8_t dx, dy, err, ystep;
+  bool steep = abs(y1 - y0) > abs(x1 - x0);
+  if (steep) {
+    // Swap x0 and y0
+    err = x0;
+    x0 = y0;
+    y0 = err;
+
+    // Swap x1 and y1
+    err = x1;
+    x1 = y1;
+    y1 = err;
+  }
+
+  if (x0 > x1) {
+    // Swap x0 and x1
+    err = x0;
+    x0 = x1;
+    x1 = err;
+    
+    // Swap y0 and y1
+    err = y0;
+    y0 = y1;
+    y1 = err;
+  }
+  
+  dx = x1 - x0;
+  dy = abs(y1 - y0);
+
+  err = dx / 2;
+
+  if (y0 < y1) {
+    ystep = 1;
+  } else {
+    ystep = -1;
+  }
+
+  for (; x0 <= x1; x0++) {
+    if (steep) {
+      setPixel(y0, x0, value);
+    } else {
+      setPixel(x0, y0, value);
+    }
+    err -= dy;
+    if (err < 0) {
+      y0 += ystep;
+      err += dx;
+    }
+  }
 }
 
 void loadXGlyph35(int dx, int dy, int w, int h, int bb, int xb, int yb) {
@@ -1153,7 +1248,7 @@ void gotCoins(int count) {
 
   // Serial.print("Coins: ");
   // Serial.println(count);
-  
+  pet.rpg.coins += count;
   doRandTransition(0, 64, true); // fast Fadeout with fill
   
   loadGlyph35('C', 6, 0);
@@ -1218,7 +1313,18 @@ void gotLevel(int level) {
   delay(5000);
   doRandTransition(1, 64, false); // Fast fade-in without fill
 }
-
+void doShiftTransition(bool lr) {
+  uint8_t i;
+  for (i = 0; i < 32; i++) {
+    if (lr) {
+      doOffset(1);
+    } else {
+      doOffset(-1);
+    }
+    drawPixels();
+    delay((2000 / 32) / T_FPS);
+  }
+}
 
 void doRandTransition(bool v, uint8_t fs, bool fill) {
   int x, y, z;
@@ -1259,73 +1365,6 @@ void doRandTransition(bool v, uint8_t fs, bool fill) {
     clearPixels();
   }
   drawPixels();
-}
-
-
-void rectPixels(int8_t x, int8_t y, int8_t w, int16_t h, bool value, bool fill) {
-  if (fill) { // Draw one horizonal line per pixel height.
-    for(uint8_t i = 0; i < h; i++) {
-      linePixels(x, y + i, x + w - 1, y + i, value);
-    }    
-  } else { // Draw outline of square
-    linePixels(x, y, x + w - 1, y, value); // top
-    linePixels(x, y + h - 1, x + w - 1, y + h - 1, value); // bottom
-    linePixels(x, y, x, y + h -1, value); // left
-    linePixels(x + w - 1, y, x + w - 1, y + h - 1, value); // right
-  }
-}
-
-// Adapted from adafruit GFX library, which is based on Bresenham's line algorithm
-void linePixels(int8_t x0, int8_t y0, int8_t x1, int16_t y1, bool value) {
-  int8_t dx, dy, err, ystep;
-  bool steep = abs(y1 - y0) > abs(x1 - x0);
-  if (steep) {
-    // Swap x0 and y0
-    err = x0;
-    x0 = y0;
-    y0 = err;
-
-    // Swap x1 and y1
-    err = x1;
-    x1 = y1;
-    y1 = err;
-  }
-
-  if (x0 > x1) {
-    // Swap x0 and x1
-    err = x0;
-    x0 = x1;
-    x1 = err;
-    
-    // Swap y0 and y1
-    err = y0;
-    y0 = y1;
-    y1 = err;
-  }
-  
-  dx = x1 - x0;
-  dy = abs(y1 - y0);
-
-  err = dx / 2;
-
-  if (y0 < y1) {
-    ystep = 1;
-  } else {
-    ystep = -1;
-  }
-
-  for (; x0 <= x1; x0++) {
-    if (steep) {
-      setPixel(y0, x0, value);
-    } else {
-      setPixel(x0, y0, value);
-    }
-    err -= dy;
-    if (err < 0) {
-      y0 += ystep;
-      err += dx;
-    }
-  }
 }
 
 uint8_t getExpLevel() {
