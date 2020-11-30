@@ -97,10 +97,11 @@ void petSelectorIn() {
       b = reverse(pgm_read_byte(&(gfx_zzzIcon[y][x])));
       drawTFTraw(b, (w * 4 + (w * 6)) + x * 8, h + y, 1);
 
-      b = reverse(pgm_read_byte(&(gfx_ExploreIcon[y][x])));
+      b = pgm_read_byte(&(gfx_ExploreIcon[y][x]));
       drawTFTraw(b, (w * 5 + (w * 8)) + x * 8, h + y, 1);
     }
   }
+  tft.drawCircle((w * 5 + (w * 8)) + 12 + 4, h + 12 + 4, 12, tft.color565(10, 12, 6));
 }
 
 void petSelector(int sel) {
@@ -173,7 +174,7 @@ void petButtons() {
   tft.drawCircle(w * 3 + (w * 2), y + h - 8, 6, tft.color565(128, 12, 24));
 }
 
-void processTouch() {
+void processTouch(bool sr) {
   bool btn_istate[3]; // Instantanious state
   int i; // Temp Variable
   int ay = round(lcd_h * T_SELS) + ((T_PIXS + T_PIXG) * 32) + T_BUTP; // Calculate active y
@@ -211,7 +212,7 @@ void processTouch() {
         btn_istate[2] = true;
       }
     }
-  } else {
+  } else if(sr) {
     randomSeed(p.x); // Update random seed often
   }
 #endif
@@ -397,7 +398,7 @@ void libpet_tick() {
 }
 
 void loop(void) {
-  processTouch(); // Process Touch Events
+  processTouch(true); // Process Touch Events
   //libpet_display(false);
   // Process menu
   if(millis() - lastTick > (1000 / T_TICK)) { // If its time for tick
@@ -423,7 +424,7 @@ void loop(void) {
     lastFrame = millis(); // Record last frame time
     gfx_render();
     
-    processTouch();
+    processTouch(true);
     
     // Check if eating
     if(tdisp.oframe == gfx_frames[OVERLAY_EAT] - 1) { // Last frame check
@@ -674,23 +675,22 @@ void drawOverlay(int id, int frame) {
     setPixel(24 - frame, 8, 1);
     setPixel(26 - frame, 8, 1); 
   } else {
-  
-  for (y = 0; y < 32; y++) {
-    for (x = 0; x < 4; x++) {
-      switch(id) {
-        case OVERLAY_ZZZ: // Overlay Zzz [2 frames]
-          pixbuf[y][x] |= reverse(pgm_read_byte(&(gfx_overlayZzz[frame][y][x])));
-          break;
-        case OVERLAY_EAT: // Overlay Eat [6 frames]
-          pixbuf[y][x] |= reverse(pgm_read_byte(&(gfx_overlayEat[frame][y][x])));
-          break;
-        case OVERLAY_STINK: // Overlay Stink [2 frames]
-          pixbuf[y][x] |= reverse(pgm_read_byte(&(gfx_overlayStink[frame][y][x])));
-          break;
+    for (y = 0; y < 32; y++) {
+      for (x = 0; x < 4; x++) {
+        switch(id) {
+          case OVERLAY_ZZZ: // Overlay Zzz [2 frames]
+            pixbuf[y][x] |= reverse(pgm_read_byte(&(gfx_overlayZzz[frame][y][x])));
+            break;
+          case OVERLAY_EAT: // Overlay Eat [6 frames]
+            pixbuf[y][x] |= reverse(pgm_read_byte(&(gfx_overlayEat[frame][y][x])));
+            break;
+          case OVERLAY_STINK: // Overlay Stink [2 frames]
+            pixbuf[y][x] |= reverse(pgm_read_byte(&(gfx_overlayStink[frame][y][x])));
+            break;
+        }
       }
     }
   }
-}
 }
 
 void drawAnimation(int id, int frame) {
@@ -1162,6 +1162,7 @@ void libpet_explore() {
   bool restore = false; // restore backup pixel buffer
   bool hide = true;
   bool fill = true;
+  long tt;
   int i, j, fitems = 0;
   doRandTransition(1, 8, true); // frameskip 8 seems nice
   // Set starting co-ordinates
@@ -1231,7 +1232,6 @@ void libpet_explore() {
       // Check for find
       for (j = 0; j < EXPLORE_HIDE; j++) {
         if (x == r[j][0] && y == r[j][1]) { // found something
-          delay(500); // anti-flash
           // What did we find?
           switch(random(0, 65)) {
             case 7:  // item
@@ -1242,6 +1242,8 @@ void libpet_explore() {
             case 50:
             case 40:
               i = 0; // reset steps
+              if (explorer_high == 0)
+                explorer_high++;
               gotLevel(explorer_high);
               fill = true;
               hide = true;
@@ -1299,7 +1301,12 @@ void libpet_explore() {
 
       drawPixels();
       //delay(10); // DEBUG
-      delay(1000 / (T_FPS * 8)); // 2 - 4 Seems nicely balanced
+      //delay(1000 / (T_FPS * 4)); // 2 - 4 Seems nicely balanced
+      tt = millis();
+      while (millis() - tt < 1000 / (T_FPS * 4)) { // burn time watching touch
+        processTouch(false);
+        delay(10);
+      }
     }
   }
   // Serial.println("Explore Over");
@@ -1338,7 +1345,11 @@ void gotCoins(int count) {
     loadGlyph35(snum[i], ((5 - x) * 4) + (i * 4) + 6, 18);
   }
   drawPixels();
-  delay(5000);
+  long tt = millis();
+  while (millis() - tt < 5000 / T_FPS) { // burn time watching touch
+    processTouch(false);
+    delay(10);
+  }
   doRandTransition(1, 64, false); // Fast fade-in without fill
 }
 
@@ -1374,12 +1385,17 @@ void gotLevel(int level) {
     loadGlyph35(snum[i], ((5 - x) * 4) + (i * 4) + 6, 18);
   }
   drawPixels();
-  delay(5000);
+  long tt = millis();
+  while (millis() - tt < 5000 / T_FPS) { // burn time watching touch
+    processTouch(false);
+    delay(10);
+  }
   doRandTransition(1, 64, false); // Fast fade-in without fill
 }
 
 void doShiftTransition(bool lr) {
   uint8_t i;
+  long tt;
   for (i = 0; i < 32; i++) {
     if (lr) {
       doOffset(1);
@@ -1387,7 +1403,11 @@ void doShiftTransition(bool lr) {
       doOffset(-1);
     }
     drawPixels();
-    delay((2000 / 32) / T_FPS);
+    tt = millis();
+    while (millis() - tt < (2000 / 32) / T_FPS) { // burn time watching touch
+      processTouch(false);
+      delay(10);
+    }
   }
 }
 
@@ -1420,6 +1440,7 @@ void doRandTransition(bool v, uint8_t fs, bool fill) {
         z++;
       }
     }
+    processTouch(false);
     drawPixels();
     delay(1);
   }
