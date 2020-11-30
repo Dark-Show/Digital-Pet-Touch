@@ -775,7 +775,9 @@ void drawDisplay(int id) {
           pixbuf[2 + yy][px] |= reverse(pgm_read_byte(&(gfx_Hunger[yy][px])));
         }
       }
-      p = map(pet.hunger, 0, HUNGER_DEATH, 0, 27) & 0x1F;
+      p = map(pet.hunger, 0, HUNGER_DEATH, 0, 27);
+      if (p > 27)
+        p = 27;
       break;
     case DISPLAY_ENERGY: // Display Energy
       for (yy = 0; yy < ifo_Energy[1]; yy++) {
@@ -784,7 +786,9 @@ void drawDisplay(int id) {
           pixbuf[2 + yy][px] |= reverse(pgm_read_byte(&(gfx_Energy[yy][px])));
         }
       }
-      p = map(pet.energy, FORCE_SLEEP, 256, 0, 27) & 0x1F;
+      p = map(pet.energy, FORCE_SLEEP, 256, 0, 27);
+      if (p > 27)
+        p = 27;
       break;
     case DISPLAY_WASTE: // Display Waste
       for (yy = 0; yy < ifo_Age[1]; yy++) {
@@ -793,7 +797,9 @@ void drawDisplay(int id) {
           pixbuf[2 + yy][px] |= reverse(pgm_read_byte(&(gfx_Waste[yy][px])));
         }
       }
-      p = map(pet.waste, 0, WASTE_SICK, 0, 27) & 0x1F;
+      p = map(pet.waste, 0, WASTE_SICK, 0, 27);
+      if (p > 27)
+        p = 27;
       break;
     case DISPLAY_AGE: // Display Age
       for (yy = 0; yy < ifo_Age[1]; yy++) {
@@ -1232,12 +1238,11 @@ void libpet_explore() {
               //Serial.println("Item");
               break;
             
-            case 60: // deep level entrance (our highest level + 1)
+            case 60: // deep level entrance (our highest level)
             case 50:
             case 40:
               i = 0; // reset steps
-              gotLevel(++explorer_high);
-              l = explorer_high;
+              gotLevel(explorer_high);
               fill = true;
               hide = true;
               break;
@@ -1252,9 +1257,11 @@ void libpet_explore() {
               fill = true;
               hide = true;
               break;
-            case 64: // very big coins
+            case 64: // big coins
               gotCoins(random(100, (20 * l) + 200)); // Level bonus
-            case 32: // big coins
+              restore = true;
+              break;
+            case 32: // medium coins
             case 16:
               gotCoins(random(20, (10 * l) + 100)); // Level bonus
               restore = true;
