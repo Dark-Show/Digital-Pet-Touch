@@ -1437,33 +1437,36 @@ void doShiftTransition(bool lr) {
 }
 
 void doRandTransition(bool v, uint8_t fs, bool fill) {
-  int x, y, z;
+  int x, y, z, r = 0;
   int todo = 32 * 32; // total pixels
   if (v && fill) {
     clearPixels();
   } else if (!v && fill) {
     fillPixels();
-  }
-  
-  todo = 0;
-  for (y = 0; y < 32; y++) {
-    for (x = 0; x < 32; x++) {
-      if(getPixel(x, y) != v) {
-        todo++;
+  } else if(!fill) {
+    todo = 0;
+    for (y = 0; y < 32; y++) {
+      for (x = 0; x < 32; x++) {
+        if(getPixel(x, y) != v) {
+          todo++;
+        }
       }
     }
   }
-    
   drawPixels();
-  while (todo - 1 > fs) { // Arduino too slow, skip last frame
+  while (todo - 1 > fs && r < 120) { // end check & retry cuttoff
     z = 0;
-    while (z < fs) { // lcd too slow frame skip
+    while (z < fs && r < 120) { // frame skip & retry cuttoff
       x = random(0, 32);
       y = random(0, 32);
       if (getPixel(x, y) != v) {
         setPixel(x, y, v);
         todo--;
         z++;
+        r = 0;
+      } else {
+        r++;
+        Serial.println(r);
       }
     }
     processTouch(false);
