@@ -81,7 +81,7 @@ void drawInactive() {
 void petSelectorIn() {
   uint8_t b;
   int h = T_SELP;
-  int w = round((lcd_w / 4) / 3.1);
+  int w = round((lcd_w / 5) / 3.1);
   int x, y;
   for (y = 0; y < 32; y++) {
     for (x = 0; x < 4; x++) {
@@ -96,6 +96,9 @@ void petSelectorIn() {
 
       b = reverse(pgm_read_byte(&(gfx_zzzIcon[y][x])));
       drawTFTraw(b, (w * 4 + (w * 6)) + x * 8, h + y, 1);
+
+      b = reverse(pgm_read_byte(&(gfx_ExploreIcon[y][x])));
+      drawTFTraw(b, (w * 5 + (w * 8)) + x * 8, h + y, 1);
     }
   }
 }
@@ -103,7 +106,7 @@ void petSelectorIn() {
 void petSelector(int sel) {
   uint8_t b;
   int h = T_SELP;
-  int w = round((lcd_w / 4) / 3.1);
+  int w = round((lcd_w / 5) / 3.1);
   int x, y;
   for (y = 0; y < 32; y++) {
     for (x = 0; x < 4; x++) {      
@@ -113,10 +116,9 @@ void petSelector(int sel) {
       drawTFTinv(b, (w * 2 + (w * 2)) + x * 8, h + y, 0);
       drawTFTinv(b, (w * 3 + (w * 4)) + x * 8, h + y, 0);
       drawTFTinv(b, (w * 4 + (w * 6)) + x * 8, h + y, 0);
+      drawTFTinv(b, (w * 5 + (w * 8)) + x * 8, h + y, 0);
       
       switch(sel) {
-        case 4:
-          tdisp.selector = 0;
         case 0:
           drawTFTraw(b, w + x * 8, h + y, 0);
           break;
@@ -126,10 +128,11 @@ void petSelector(int sel) {
         case 2:
           drawTFTraw(b, (w * 3 + (w * 4)) + x * 8, h + y, 0);
           break;
-        case -1:
-          tdisp.selector = 3;
         case 3:
           drawTFTraw(b, (w * 4 + (w * 6)) + x * 8, h + y, 0);
+          break;
+        case 4:
+          drawTFTraw(b, (w * 5 + (w * 8)) + x * 8, h + y, 0);
           break;
       }
     }
@@ -234,7 +237,7 @@ void processTouch() {
             } else {
               tdisp.selector--;
               if(tdisp.selector < 0) {
-                tdisp.selector = 3;
+                tdisp.selector = 4;
               }
               petSelector(tdisp.selector);
             }
@@ -265,6 +268,9 @@ void processTouch() {
                 case 3: // Sleep
                   libpet_sleep();
                   break;
+                case 4: // RPG
+                  libpet_explore();
+                  break;
               }
             }
           }
@@ -281,7 +287,7 @@ void processTouch() {
               gfx_render();
             } else {
               tdisp.selector++;
-              if(tdisp.selector > 3) {
+              if(tdisp.selector > 4) {
                 tdisp.selector = 0;
               }
             }
@@ -324,10 +330,8 @@ void libpet_tick() {
   // Stage Check
   if (pet.stage == 0 && pet.age > AGE_HATCH) {
     pet.stage += 1; // Evolve
-    //libpet_explore();
   } else if (pet.stage == 1 && pet.age > AGE_MATURE) {
     pet.stage += 1; // Evolve
-    //libpet_explore();
   }
   
   // State Check
@@ -442,7 +446,6 @@ void libpet_eat() {
 }
 
 void libpet_sleep() {
-  libpet_explore();
   if (pet.energy <= ENABLE_SLEEP && pet.state.alive && !pet.state.eat && !pet.state.clean && pet.stage > 0) {
     tdisp.oframe = 0;
     pet.state.sleep = true;
@@ -697,7 +700,7 @@ void drawAnimation(int id, int frame) {
       for (yy = 0; yy < 12; yy++) {
         for (xx = 0; xx < 32; xx++) {
           px = calculateXByte(xx);
-          if(frame == 0) {
+          if (frame == 0) {
             pixbuf[19 + yy][px] |= reverse(pgm_read_byte(&(gfx_idleEgg[0][yy][px])));
           } else {
             pixbuf[19 + yy][px] |= reverse(pgm_read_byte(&(gfx_idleEgg[1][yy][px])));
@@ -799,6 +802,8 @@ void drawDisplay(int id) {
           pixbuf[2 + yy][px] |= reverse(pgm_read_byte(&(gfx_Age[yy][px])));
         }
       }
+      
+      // Adjust for each life phase
       if (pet.age < AGE_MOVE) {
         p = map(pet.age, 0, AGE_MOVE, 0, 27);
       } else if (pet.age < AGE_HATCH) {
@@ -820,13 +825,13 @@ void drawDisplay(int id) {
       // Coints Numeric Reading
       itoa(pet.rpg.coins, snum, 10); // int to base 10 string
 
-      // count digits
+      // Count digits
       for (x = 0; x < 5; x++) {
         if(snum[x] == 0x00)
           break;
       }
       for (i = 0; i < x; i++) {
-        loadGlyph35(snum[i], ((5 - x) * 4) + (i * 4) + 13, 8);
+        loadGlyph35(snum[i], ((5 - x) * 4) + (i * 4) + 13, 8); // Draw them aligned right
       }
 
       // Luck
@@ -843,7 +848,7 @@ void drawDisplay(int id) {
           break;
       }
       for (i = 0; i < x; i++) {
-        loadGlyph35(snum[i], ((5 - x) * 4) + (i * 4) + 13, 15);
+        loadGlyph35(snum[i], ((5 - x) * 4) + (i * 4) + 13, 15); // Draw them aligned right
       }
 
       // Attack
@@ -859,7 +864,7 @@ void drawDisplay(int id) {
           break;
       }
       for (i = 0; i < x; i++) {
-        loadGlyph35(snum[i], ((5 - x) * 4) + (i * 4) + 13, 21);
+        loadGlyph35(snum[i], ((5 - x) * 4) + (i * 4) + 13, 21); // Draw them aligned right
       }
 
       // Defense
@@ -875,7 +880,7 @@ void drawDisplay(int id) {
           break;
       }
       for (i = 0; i < x; i++) {
-        loadGlyph35(snum[i], ((5 - x) * 4) + (i * 4) + 13, 27);
+        loadGlyph35(snum[i], ((5 - x) * 4) + (i * 4) + 13, 27); // Draw them aligned right
       }
 
       
@@ -1154,8 +1159,8 @@ void libpet_explore() {
   int i, j, fitems = 0;
   doRandTransition(1, 8, true); // frameskip 8 seems nice
   // Set starting co-ordinates
-  x = random(0, 31);
-  y = random(0, 31);
+  x = random(0, 32);
+  y = random(0, 32);
   if (pet.state.alive && !pet.state.sleep && !pet.state.eat) {
     fillPixels(); // Fill real pixel buffer
     
@@ -1166,8 +1171,8 @@ void libpet_explore() {
         hide = false;
         // Hide stuff
         for (j = 0; j < EXPLORE_HIDE; j++) { // Increase with luck
-          r[j][0] = random(0, 31);
-          r[j][1] = random(0, 31);
+          r[j][0] = random(0, 32);
+          r[j][1] = random(0, 32);
         }
       }
       setPixel(x, y, 0); // Set Real Pixel Buffer
@@ -1178,7 +1183,7 @@ void libpet_explore() {
 
       // Explore
       do {
-        t = random(-8, 8);
+        t = random(-8, 9);
         // Not sure if we need these extra random lines
         switch(t) {
           case -8:
@@ -1222,7 +1227,7 @@ void libpet_explore() {
         if (x == r[j][0] && y == r[j][1]) { // found something
           delay(500); // anti-flash
           // What did we find?
-          switch(random(0, 64)) {
+          switch(random(0, 65)) {
             case 7:  // item
               //Serial.println("Item");
               break;
