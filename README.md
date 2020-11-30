@@ -7,6 +7,7 @@ Based on Python Emulator by ryesalvador: https://gist.github.com/ryesalvador/e88
     * 1024 Pixel "Map", 256 "Steps"
     * Locatable Level Entrances
       * Reset Steps to Zero
+      * Chance of entering at maximum reached depth
     * Locatable Coins
       * Max allowed return increases on level
 
@@ -18,6 +19,7 @@ Based on Python Emulator by ryesalvador: https://gist.github.com/ryesalvador/e88
     * Allow consumable items to increase/decrease the life span (reduce age) of a pet.
   * Locations
     * Locations will "train" your pet
+      * Very rare locations will train "magic"
     * Rare locations can increase/decrease life span
 
 # Currently Supported Hardware
