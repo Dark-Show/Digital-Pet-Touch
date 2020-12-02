@@ -16,7 +16,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#define KEYESTUDIO28LCD  // Keyestudio 2.8" LCD Shield
+#define KEYESTUDIO28LCD  // Keyestudio 2.8" LCD Shield (ILI9328)
 
 #include "pet_gfx.h";    // After graphics are defined
 #include "digitalpet.h";
@@ -43,9 +43,9 @@ void setup(void) {
       Serial.print(identifier, HEX);
       Serial.println(")");
       
-      while(1) {
-        delay(100);
-      }
+      //while(1) {
+      //  delay(100);
+      //}
   }
 
   lcd_w = tft.width();
@@ -479,13 +479,14 @@ void libpet_sleep() {
 }
 
 void libpet_clean() {
-  if (pet.waste >= ENABLE_CLEAN && pet.state.alive && !pet.state.sleep && !pet.state.eat && pet.stage > 0 && !pet.state.explore) {
-    tdisp.oframe = 0;
+  if (pet.waste >= ENABLE_CLEAN && !pet.state.clean && pet.state.alive && !pet.state.sleep && !pet.state.eat && pet.stage > 0 && !pet.state.explore) {
     pet.state.clean = true;
+    tdisp.oframe = 0;
+    //tdisp.overlay = OVERLAY_CLEAN;
+    tdisp.offset = 0;
     libpet_display(false);
     gfx_render();
     doShiftTransition(1);
-    tdisp.offset = 0;
     pet.waste = 0;
     pet.state.clean = false;
     libpet_tick(); // Must tick to catch warning
@@ -664,7 +665,8 @@ void gfx_render() {
         doOffset(random(-1, 1));
       drawOverlay(tdisp.overlay, tdisp.oframe); // Get graphics into pixbuf
     }
-    doOffset(tdisp.offset);
+    if(tdisp.overlay != OVERLAY_CLEAN)
+      doOffset(tdisp.offset);
   }
   //drawOverlay(OVERLAY_STINK, 0);
   drawPixels(); // Render
@@ -849,11 +851,11 @@ void drawDisplay(int id) {
       loadGlyph35('e', 20, 2);
       loadGlyph35('r', 24, 2);
       drawProgress (pet.hunger, 0, HUNGER_DEATH, 9);
-      loadGlyph35('w',  6, 19);
-      loadGlyph35('a', 10, 19);
-      loadGlyph35('s', 14, 19);
-      loadGlyph35('t', 18, 19);
-      loadGlyph35('e', 22, 19);
+      loadGlyph35('w',  6, 18);
+      loadGlyph35('a', 10, 18);
+      loadGlyph35('s', 14, 18);
+      loadGlyph35('t', 18, 18);
+      loadGlyph35('e', 22, 18);
       drawProgress (pet.waste, 0, WASTE_SICK, 25);
       break;
     case DISPLAY_STAT2: // Display Energy
@@ -864,9 +866,9 @@ void drawDisplay(int id) {
       loadGlyph35('g', 20, 2);
       loadGlyph35('y', 24, 2);
       drawProgress (pet.energy, FORCE_SLEEP, 256, 9);
-      loadGlyph35('a', 10, 19);
-      loadGlyph35('g', 14, 19);
-      loadGlyph35('e', 18, 19);
+      loadGlyph35('a', 10, 18);
+      loadGlyph35('g', 14, 18);
+      loadGlyph35('e', 18, 18);
       // Adjust for each life phase
       if (pet.age < AGE_MOVE) {
         drawProgress (pet.age, 0, AGE_MOVE, 25);
@@ -1449,7 +1451,7 @@ void gotLevel(int level) {
   //Serial.println(level);
   doRandTransition(0, 64, true); // fast Fadeout with fill
   
-  loadGlyph35('E', 0, 2);
+  loadGlyph35('e', 0, 2);
   loadGlyph35('n', 4, 2);
   loadGlyph35('t', 8, 2);
   loadGlyph35('r', 12, 2);
