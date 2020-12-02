@@ -231,7 +231,7 @@ void processTouch(bool sr) {
             if (tdisp.in_stat) {
               tdisp.sel_stat--;
               if(tdisp.sel_stat < 0) {
-                tdisp.sel_stat = 4;
+                tdisp.sel_stat = 2;
               }
               libpet_display(false);
               gfx_render();
@@ -283,7 +283,7 @@ void processTouch(bool sr) {
             btn_tstate[i] = 0; // Held
             if (tdisp.in_stat) {
               tdisp.sel_stat++;
-              if(tdisp.sel_stat > 4) {
+              if(tdisp.sel_stat > 2) {
                 tdisp.sel_stat = 0;
               }
               libpet_display(false);
@@ -553,7 +553,7 @@ void libpet_display(bool increment){
     }
   } else if(tdisp.in_stat) {
     tdisp.overlay = 0;
-    tdisp.animation = DISPLAY_HUNGER + tdisp.sel_stat;
+    tdisp.animation = DISPLAY_STAT1 + tdisp.sel_stat;
   } else if (!pet.state.alive) {
     if (pet.stage == 1) {
       tdisp.animation = SLEEP_BABY;
@@ -840,58 +840,42 @@ void drawDisplay(int id) {
   uint8_t x = 0, i = 0;
   char snum[5];
   
-  
   switch(id) {
-    case DISPLAY_HUNGER: // Display Hunger
-      for (yy = 0; yy < ifo_Hunger[1]; yy++) {
-        for (xx = 0; xx < ifo_Hunger[0]; xx++) {
-          px = calculateXByte(xx);
-          pixbuf[2 + yy][px] |= reverse(pgm_read_byte(&(gfx_Hunger[yy][px])));
-        }
-      }
-      p = map(pet.hunger, 0, HUNGER_DEATH, 0, 27);
-      if (p > 27)
-        p = 27;
+    case DISPLAY_STAT1: // Display Hunger
+      loadGlyph35('h',  4, 2);
+      loadGlyph35('u',  8, 2);
+      loadGlyph35('n', 12, 2);
+      loadGlyph35('g', 16, 2);
+      loadGlyph35('e', 20, 2);
+      loadGlyph35('r', 24, 2);
+      drawProgress (pet.hunger, 0, HUNGER_DEATH, 9);
+      loadGlyph35('w',  6, 19);
+      loadGlyph35('a', 10, 19);
+      loadGlyph35('s', 14, 19);
+      loadGlyph35('t', 18, 19);
+      loadGlyph35('e', 22, 19);
+      drawProgress (pet.waste, 0, WASTE_SICK, 25);
       break;
-    case DISPLAY_ENERGY: // Display Energy
-      for (yy = 0; yy < ifo_Energy[1]; yy++) {
-        for (xx = 0; xx < ifo_Energy[0]; xx++) {
-          px = calculateXByte(xx);
-          pixbuf[2 + yy][px] |= reverse(pgm_read_byte(&(gfx_Energy[yy][px])));
-        }
-      }
-      p = map(pet.energy, FORCE_SLEEP, 256, 0, 27);
-      if (p > 27)
-        p = 27;
-      break;
-    case DISPLAY_WASTE: // Display Waste
-      for (yy = 0; yy < ifo_Age[1]; yy++) {
-        for (xx = 0; xx < ifo_Age[0]; xx++) {
-          px = calculateXByte(xx);
-          pixbuf[2 + yy][px] |= reverse(pgm_read_byte(&(gfx_Waste[yy][px])));
-        }
-      }
-      p = map(pet.waste, 0, WASTE_SICK, 0, 27);
-      if (p > 27)
-        p = 27;
-      break;
-    case DISPLAY_AGE: // Display Age
-      for (yy = 0; yy < ifo_Age[1]; yy++) {
-        for (xx = 0; xx < ifo_Age[0]; xx++) {
-          px = calculateXByte(xx);
-          pixbuf[2 + yy][px] |= reverse(pgm_read_byte(&(gfx_Age[yy][px])));
-        }
-      }
-      
+    case DISPLAY_STAT2: // Display Energy
+      loadGlyph35('e',  4, 2);
+      loadGlyph35('n',  8, 2);
+      loadGlyph35('e', 12, 2);
+      loadGlyph35('r', 16, 2);
+      loadGlyph35('g', 20, 2);
+      loadGlyph35('y', 24, 2);
+      drawProgress (pet.energy, FORCE_SLEEP, 256, 9);
+      loadGlyph35('a', 10, 19);
+      loadGlyph35('g', 14, 19);
+      loadGlyph35('e', 18, 19);
       // Adjust for each life phase
       if (pet.age < AGE_MOVE) {
-        p = map(pet.age, 0, AGE_MOVE, 0, 27);
+        drawProgress (pet.age, 0, AGE_MOVE, 25);
       } else if (pet.age < AGE_HATCH) {
-        p = map(pet.age, AGE_MOVE, AGE_HATCH, 0, 27);
+        drawProgress (pet.age, AGE_MOVE, AGE_HATCH, 25);
       } else if (pet.age < AGE_MATURE) {
-        p = map(pet.age, AGE_HATCH, AGE_MATURE, 0, 27);
+        drawProgress (pet.age, AGE_HATCH, AGE_MATURE, 25);
       } else {
-        p = map(pet.age, AGE_MATURE, AGE_DEATH, 0, 27);
+        drawProgress (pet.age, AGE_MATURE, AGE_DEATH, 25);
       }
       break;
     case DISPLAY_RPG: // Display RPG
@@ -962,19 +946,20 @@ void drawDisplay(int id) {
       for (i = 0; i < x; i++) {
         loadGlyph35(snum[i], ((5 - x) * 4) + (i * 4) + 13, 27); // Draw them aligned right
       }
-
-      
       break;
   }
-  if (id != DISPLAY_RPG) {
-    // Draw progress bar
-    linePixels( 3, 11, 28, 11, 1); // top
-    linePixels( 3, 17, 28, 17, 1); // bottom
-    linePixels( 2, 12,  2, 16, 1); // left
-    linePixels(29, 12, 29, 16, 1); // right
-    
-    rectPixels(3, 12,  p,  5, 1, 1); // Fill in progress bar
-  }
+}
+
+void drawProgress (int value, int vmin, int vmax, int y) {
+    int p;
+    linePixels( 3, y,     28, y,     1); // top
+    linePixels( 3, y + 4, 28, y + 4, 1); // bottom
+    linePixels( 2, y + 1 , 2, y + 3, 1); // left
+    linePixels(29, y + 1, 29, y + 3, 1); // right
+    p = map(value, vmin, vmax, 0, 27);
+    if (p > 27)
+      p = 27;
+    rectPixels(3, y + 1, p,  3, 1, 1); // Fill in progress bar
 }
 
 void rectPixels(int8_t x, int8_t y, int8_t w, int16_t h, bool value, bool fill) {

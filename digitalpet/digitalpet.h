@@ -65,11 +65,9 @@
 #define OVERLAY_EAT     9
 #define OVERLAY_STINK  10
 // Display IDs
-#define DISPLAY_HUNGER 0
-#define DISPLAY_ENERGY 1
-#define DISPLAY_WASTE  2
-#define DISPLAY_AGE    3
-#define DISPLAY_RPG    4
+#define DISPLAY_STAT1 0
+#define DISPLAY_STAT2 1
+#define DISPLAY_RPG   2
 
 #if defined(__SAM3X8E__)
     #undef __FlashStringHelper::F(string_literal)
@@ -454,37 +452,12 @@ const uint8_t gfx_sleepMature[2][32][4] PROGMEM = {{{0x00, 0x00, 0x00, 0x00},
                                                     {0x00, 0x04, 0x02, 0x00},   // 0x20400
                                                     {0x00, 0x02, 0x04, 0x00},   // 0x40200
                                                     {0x00, 0x02, 0x04, 0x00}}}; // 0x40200
-const uint8_t ifo_Hunger[2] = {32, 5};
-const uint8_t gfx_Hunger[5][4] PROGMEM = {{0xa4, 0x94, 0xcc, 0x3b}, // 0x3bcc94a4
-                                          {0xa4, 0xb4, 0x52, 0x48}, // 0x4852b4a4
-                                          {0xbc, 0xd4, 0xc2, 0x39}, // 0x39c2d4bc
-                                          {0xa4, 0x94, 0x5a, 0x48}, // 0x485a94a4
-                                          {0x24, 0x93, 0xdc, 0x4b}}; // 0x4bdc9324
-const uint8_t ifo_Energy[2] = {32, 5};
-const uint8_t gfx_Energy[5][4] PROGMEM = {{0xbc, 0xf4, 0x8e, 0x49}, // 0x498ef4bc
-                                          {0x84, 0x15, 0x52, 0x4a}, // 0x4a521584
-                                          {0x8c, 0x36, 0x4e, 0x70}, // 0x704e368c
-                                          {0x84, 0x14, 0x52, 0x43}, // 0x43521484
-                                          {0xbc, 0xf4, 0x92, 0x3b}}; // 0x3b92f4bc
-const uint8_t ifo_Age[2] = {32, 5};
-const uint8_t gfx_Age[5][4] PROGMEM = {{0x38, 0xce, 0x07, 0x00}, // 0x7ce38
-                                        {0x44, 0x51, 0x00, 0x00}, // 0x5144
-                                        {0x7c, 0xc1, 0x01, 0x00}, // 0x1c17c
-                                        {0x44, 0x59, 0x00, 0x00}, // 0x5944
-                                        {0x44, 0xde, 0x07, 0x00}}; // 0x7de44
-
-const uint8_t ifo_Waste[2] = {32, 5};
-const uint8_t gfx_Waste[5][4] PROGMEM = {{0x44, 0x8e, 0xf3, 0x7d}, // 0x7df38e44
-                                         {0x44, 0x51, 0x40, 0x04}, // 0x4405144
-                                         {0x44, 0x9f, 0x43, 0x1c}, // 0x1c439f44
-                                         {0x54, 0x11, 0x44, 0x04}, // 0x4441154
-                                         {0x28, 0x91, 0x43, 0x7c}}; // 0x7c439128
 // Bits(left to right)
 const uint8_t gfx_ExploreIcon[32][4] PROGMEM = {{ 0b00000000, 0b00000000, 0b00000000, 0b00000000 },
                                                 { 0b00000000, 0b00000000, 0b00000000, 0b00000000 },
                                                 { 0b00000000, 0b00000000, 0b00000000, 0b00000000 },
                                                 { 0b00000000, 0b00000000, 0b00000000, 0b00000000 },
-                                                { 0b00000000, 0b00000000, 0b00000000, 0b00000000 }, //
+                                                { 0b00000000, 0b00000000, 0b00000000, 0b00000000 },
                                                 { 0b00000001, 0b11100000, 0b00000000, 0b00000000 },
                                                 { 0b00000011, 0b00011000, 0b00000000, 0b00000000 },
                                                 { 0b00000011, 0b00010000, 0b00000000, 0b00000000 },
@@ -507,7 +480,7 @@ const uint8_t gfx_ExploreIcon[32][4] PROGMEM = {{ 0b00000000, 0b00000000, 0b0000
                                                 { 0b00000000, 0b00000000, 0b00000000, 0b00000000 },
                                                 { 0b00000000, 0b00000000, 0b00000000, 0b00000000 },
                                                 { 0b00000000, 0b00000000, 0b00000000, 0b00000000 },
-                                                { 0b00000000, 0b00000000, 0b00000000, 0b00000000 }, //
+                                                { 0b00000000, 0b00000000, 0b00000000, 0b00000000 },
                                                 { 0b00000000, 0b00000000, 0b00000000, 0b00000000 },
                                                 { 0b00000000, 0b00000000, 0b00000000, 0b00000000 },
                                                 { 0b00000000, 0b00000000, 0b00000000, 0b00000000 },
