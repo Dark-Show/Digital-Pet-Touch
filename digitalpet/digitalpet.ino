@@ -332,7 +332,7 @@ void libpet_init(){
   pet.rpg.coins      = COIN_DEFAULT;
   pet.rpg.attack     = random(0, 4);
   pet.rpg.defense    = random(0, 4);
-  pet.rpg.luck       = 16;//random(0, 8);
+  pet.rpg.luck       = random(0, 8);
   pet.rpg.magic      = random(0, 1);
   pet.rpg.experience = 0;
   pet.rpg.level      = 0;
@@ -1334,7 +1334,6 @@ void libpet_explore() {
             restore = true;
             break;
           default: // small coins
-          gotLocation();
             gotCoins(random(1, (10 * l) + 10)); // Level bonus
             restore = true; // restore pixel buffer
         }
@@ -1467,9 +1466,10 @@ void gotLocation() {
   int x, i = 0;
   doRandTransition(0, 64, true); // Fast fade-out with fill
   
-  x = random(0, 8);
+  x = random(0, 9);
   switch(x) {
     case 0: // Temple (LUCK)
+    case 3: //
       loadGlyph35('t',  4, 2);
       loadGlyph35('e',  8, 2);
       loadGlyph35('m', 12, 2);
@@ -1506,12 +1506,12 @@ void gotLocation() {
         i = pet.rpg.defense;
       }
       break;
-    default: // Lower chance
-      loadGlyph35('R',  8, 2);
-      loadGlyph35('u', 12, 2);
-      loadGlyph35('i', 16, 2);
-      loadGlyph35('n', 20, 2);
-      loadGlyph35('s', 24, 2);
+    default: // Nothing
+      loadGlyph35('R',  6, 2);
+      loadGlyph35('u', 10, 2);
+      loadGlyph35('i', 14, 2);
+      loadGlyph35('n', 18, 2);
+      loadGlyph35('s', 22, 2);
   }
   
   loadGlyph35('F',  6, 8);
@@ -1519,16 +1519,18 @@ void gotLocation() {
   loadGlyph35('u', 14, 8);
   loadGlyph35('n', 18, 8);
   loadGlyph35('d', 22, 8);
-  
-  itoa(i, snum, 10); // int to base 10 string
-  for (x = 0; x < 5; x++) {
-    if(snum[x] == 0x00)
-      break;
+
+  if (x < 4) { // If we are not Ruins
+    itoa(i, snum, 10); // int to base 10 string
+    for (x = 0; x < 5; x++) {
+      if(snum[x] == 0x00)
+        break;
+    }
+    for (i = 0; i < x; i++) {
+      loadGlyph35(snum[i], ((5 - x) * 4) + (i * 4) + 6, 18);
+    }
   }
-  for (i = 0; i < x; i++) {
-    loadGlyph35(snum[i], ((5 - x) * 4) + (i * 4) + 6, 18);
-  }
-  drawPixels();
+    drawPixels();
   long tt = millis();
   while (millis() - tt < 5000 / T_FPS) { // burn time watching touch
     processTouch(false);

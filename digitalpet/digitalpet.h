@@ -17,7 +17,7 @@
  */
 
 // Timing Settings
-#define T_TICK  16 // Loops of game code per second
+#define T_TICK  1 // Loops of game code per second
 #define T_FPS   2  // Frames per second
 
 // Gameplay Settings
