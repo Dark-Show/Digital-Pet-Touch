@@ -38,11 +38,10 @@
 #define ENABLE_CLEAN    32
 #define WASTE_SICK     256
 
-// 16 (low chance of level 2 reach
-// 32 (low chance of level 6 reach
-#define EXPLORE_HIDE     8
-#define EXPLORE_COST    50
-#define COIN_DEFAULT   100
+#define EXPLORE_HIDE     8 // + rpg.luck
+#define EXPLORE_COST    50 // Explore cost
+#define EAT_ADU_COST     5 // Adult eating cost
+#define COIN_DEFAULT   100 // Default coins for new pets
 
 
 // Matrix Screen Adjustments

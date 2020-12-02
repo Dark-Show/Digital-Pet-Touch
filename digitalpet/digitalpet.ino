@@ -456,6 +456,13 @@ void loop(void) {
 
 void libpet_eat() {
   if (pet.hunger >= ENABLE_EAT && pet.state.alive && !pet.state.sleep && !pet.state.clean && pet.stage > 0 && !pet.state.explore) {
+    if (pet.stage >= 2) { // if adult
+      if (pet.rpg.coins < EAT_ADU_COST) { // Cant afford to eat
+        // Show No Coin animation
+        return;
+      }
+      pet.rpg.coins -= EAT_ADU_COST; // subtract cost of meal
+    }
     tdisp.oframe = 0;
     pet.state.eat = true;
     libpet_display(false);
