@@ -260,12 +260,14 @@ void processTouch(bool sr) {
                 case 1: // Clean
                   libpet_clean();
                   break;
-                case 2: // State Page
-                  tdisp.overlay = 0;
-                  tdisp.offset = 0;
-                  tdisp.in_stat = true;
-                  libpet_display(false);
-                  gfx_render();
+                case 2: // Stats Page
+                  if(!pet.state.explore) { // FIXME: allow stats page inside explore game
+                    tdisp.overlay = 0;
+                    tdisp.offset = 0;
+                    tdisp.in_stat = true;
+                    libpet_display(false);
+                    gfx_render();
+                  }
                   break;
                 case 3: // Sleep
                   libpet_sleep();
@@ -327,13 +329,13 @@ void libpet_init(){
   tdisp.oframe    = 0; // Overlay frame
 
   // RPG stats
-  pet.rpg.coins = COIN_DEFAULT;
-  pet.rpg.attack = random(0, 8);
-  pet.rpg.defense = random(0, 8);
-  pet.rpg.luck = random(0, 8);
-  pet.rpg.attack = random(0, 8);
+  pet.rpg.coins      = COIN_DEFAULT;
+  pet.rpg.attack     = random(0, 4);
+  pet.rpg.defense    = random(0, 4);
+  pet.rpg.luck       = 16;//random(0, 8);
+  pet.rpg.magic      = random(0, 1);
   pet.rpg.experience = 0;
-  pet.rpg.level = 0;
+  pet.rpg.level      = 0;
 }
 void libpet_tick() {
   // Stage Check
@@ -453,7 +455,7 @@ void loop(void) {
 }
 
 void libpet_eat() {
-  if (pet.hunger >= ENABLE_EAT && pet.state.alive && !pet.state.sleep && !pet.state.clean && pet.stage > 0) {
+  if (pet.hunger >= ENABLE_EAT && pet.state.alive && !pet.state.sleep && !pet.state.clean && pet.stage > 0 && !pet.state.explore) {
     tdisp.oframe = 0;
     pet.state.eat = true;
     libpet_display(false);
@@ -462,7 +464,7 @@ void libpet_eat() {
 }
 
 void libpet_sleep() {
-  if (pet.energy <= ENABLE_SLEEP && pet.state.alive && !pet.state.eat && !pet.state.clean && pet.stage > 0) {
+  if (pet.energy <= ENABLE_SLEEP && pet.state.alive && !pet.state.eat && !pet.state.clean && pet.stage > 0 && !pet.state.explore) {
     tdisp.oframe = 0;
     pet.state.sleep = true;
     libpet_display(true);
@@ -471,7 +473,7 @@ void libpet_sleep() {
 }
 
 void libpet_clean() {
-  if (pet.waste >= ENABLE_CLEAN && pet.state.alive && !pet.state.sleep && !pet.state.eat && pet.stage > 0) {
+  if (pet.waste >= ENABLE_CLEAN && pet.state.alive && !pet.state.sleep && !pet.state.eat && pet.stage > 0 && !pet.state.explore) {
     tdisp.oframe = 0;
     pet.state.clean = true;
     libpet_display(false);
@@ -480,8 +482,9 @@ void libpet_clean() {
     tdisp.offset = 0;
     pet.waste = 0;
     pet.state.clean = false;
+    libpet_tick(); // Must tick to catch warning
   }
-  libpet_tick(); // Must tick to catch warning
+  
   libpet_display(false);
 }
 
@@ -658,13 +661,48 @@ void gfx_render() {
     }
     doOffset(tdisp.offset);
   }
+  //drawOverlay(OVERLAY_EAT, 4);
   drawPixels(); // Render
 }
 
 void drawOverlay(int id, int frame) {
   int x, y;
 
-  if (id == OVERLAY_CLEAN) {
+  if (id == OVERLAY_EAT) {
+    // Draw apple
+    rectPixels(20, 9, 7, 6, 1, 1);
+    setPixel(20, 14, 0); // rounding
+    setPixel(21, 11, 0); // shine dot
+    setPixel(23,  9, 0); // indent
+    // stem
+    setPixel(25, 8, 1);
+    setPixel(26, 7, 1);
+    linePixels(22, 15, 25, 15, 1); // bottom
+    linePixels(27, 10, 27, 12, 1); // right side
+
+    // Eat the apple
+    switch(frame) {
+      case 4:
+        rectPixels(20, 9, 8, 7, 0, 1);
+        setPixel(24, 9, 1);
+        break;
+      case 3:
+        rectPixels(20, 9, 4, 5, 0, 1);
+        setPixel(21, 14, 0);
+        setPixel(22, 14, 0);
+        setPixel(24, 11, 0);
+        setPixel(24, 12, 0);
+        break;
+      case 2:
+        rectPixels(20, 9, 2, 5, 0, 1);
+        rectPixels(21, 10, 2, 3, 0, 1);
+        break;
+      case 1:
+        linePixels(20, 10, 20, 12, 0);
+      default:
+        break;
+    }
+  } else if (id == OVERLAY_CLEAN) {
     linePixels(1, 0, 1, 31, 1);
   } else if (id == OVERLAY_EXLAIM && frame == 0) {
     // Draw top of mark
@@ -695,9 +733,6 @@ void drawOverlay(int id, int frame) {
         switch(id) {
           case OVERLAY_ZZZ: // Overlay Zzz [2 frames]
             pixbuf[y][x] |= reverse(pgm_read_byte(&(gfx_overlayZzz[frame][y][x])));
-            break;
-          case OVERLAY_EAT: // Overlay Eat [6 frames]
-            pixbuf[y][x] |= reverse(pgm_read_byte(&(gfx_overlayEat[frame][y][x])));
             break;
           case OVERLAY_STINK: // Overlay Stink [2 frames]
             pixbuf[y][x] |= reverse(pgm_read_byte(&(gfx_overlayStink[frame][y][x])));
@@ -843,7 +878,7 @@ void drawDisplay(int id) {
       // Coins
       loadGlyph35('5', 2,  8);
       linePixels(3, 7, 3, 13, 1);
-      // Coints Numeric Reading
+      // Numeric Reading
       itoa(pet.rpg.coins, snum, 10); // int to base 10 string
 
       // Count digits
@@ -860,7 +895,7 @@ void drawDisplay(int id) {
       loadGlyph35('U', 6,  15);
       loadGlyph35('C', 10,  15);
       loadGlyph35('K', 14,  15);
-      // Coints Numeric Reading
+      // Numeric Reading
       itoa(pet.rpg.luck, snum, 10); // int to base 10 string
 
       // count digits
@@ -876,7 +911,7 @@ void drawDisplay(int id) {
       loadGlyph35('A', 2,  21);
       loadGlyph35('T', 6,  21);
       loadGlyph35('T', 10,  21);
-      // Coints Numeric Reading
+      // Numeric Reading
       itoa(pet.rpg.attack, snum, 10); // int to base 10 string
 
       // count digits
@@ -892,7 +927,7 @@ void drawDisplay(int id) {
       loadGlyph35('D', 2,  27);
       loadGlyph35('E', 6,  27);
       loadGlyph35('F', 10,  27);
-      // Coints Numeric Reading
+      // Numeric Reading
       itoa(pet.rpg.defense, snum, 10); // int to base 10 string
 
       // count digits
@@ -1181,7 +1216,7 @@ void libpet_explore() {
   int i, j, fitems = 0;
 
   // Is pet able?
-  if (!pet.state.alive || pet.state.sleep || pet.state.eat || pet.stage == 0) {
+  if (!pet.state.alive || pet.state.sleep || pet.state.eat || pet.stage == 0 || pet.state.explore) {
     return;
   }
 
@@ -1190,7 +1225,8 @@ void libpet_explore() {
     // No Coin Animation
     return;
   }
-  
+
+  pet.state.explore = true;
   pet.rpg.coins -= EXPLORE_COST;
   
   doRandTransition(1, 8, true); // frameskip 8 seems nice
@@ -1261,22 +1297,24 @@ void libpet_explore() {
       if (x == r[j][0] && y == r[j][1]) { // found something
         // What did we find?
         switch(random(0, 65)) {
-          case 7:  // item
-            //Serial.println("Item");
+          case 14: // Location
+          case  7:
+            gotLocation();
             break;
-            
           case 60: // deep level entrance (our highest level)
           case 50:
           case 40:
+          case 30:
             i = 0; // reset steps
-            if (explorer_high == 0)
+            if (explorer_high == l) {
               explorer_high++;
+            }
             gotLevel(explorer_high);
+            l = explorer_high;
             fill = true;
             hide = true;
             break;
-          case 30:  // next level entrance
-          case 20:
+          case 20: // next level entrance
           case 10:
           case  0:
             i = 0; // reset steps
@@ -1296,6 +1334,7 @@ void libpet_explore() {
             restore = true;
             break;
           default: // small coins
+          gotLocation();
             gotCoins(random(1, (10 * l) + 10)); // Level bonus
             restore = true; // restore pixel buffer
         }
@@ -1303,14 +1342,17 @@ void libpet_explore() {
     }
     if (fill) { // Fill screen and backup
       fill = false;
-      fillPixels();
-      setPixel(x, y, 0);
+      
+      if (!tdisp.in_stat) {
+        fillPixels();
+        setPixel(x, y, 0);
+        drawPixels();
+      }
       for (int y = 0; y < 32; y++) {
         for (int x = 0; x < 4; x++) {
           bpb[y][x] = 0xFF;
         }
       }
-      drawPixels();
     }
     if(restore) {
       restore = false;
@@ -1335,6 +1377,8 @@ void libpet_explore() {
       delay(10);
     }
   }
+  pet.state.explore = false;
+  doRandTransition(0, 8, false); // Exit transition
 }
 
 void gotCoins(int count) {
@@ -1347,17 +1391,17 @@ void gotCoins(int count) {
   doShiftTransition(random(0, 2));
   //doRandTransition(0, 64, true); // fast Fadeout with fill
   
-  loadGlyph35('C', 6, 0);
-  loadGlyph35('o', 10, 0);
-  loadGlyph35('i', 14, 0);
-  loadGlyph35('n', 18, 0);
-  loadGlyph35('s', 22, 0);
+  loadGlyph35('C',  6, 2);
+  loadGlyph35('o', 10, 2);
+  loadGlyph35('i', 14, 2);
+  loadGlyph35('n', 18, 2);
+  loadGlyph35('s', 22, 2);
       
-  loadGlyph35('f', 6, 6);
-  loadGlyph35('o', 10, 6);
-  loadGlyph35('u', 14, 6);
-  loadGlyph35('n', 18, 6);
-  loadGlyph35('d', 22, 6);
+  loadGlyph35('f',  6, 8);
+  loadGlyph35('o', 10, 8);
+  loadGlyph35('u', 14, 8);
+  loadGlyph35('n', 18, 8);
+  loadGlyph35('d', 22, 8);
 
   itoa(count, snum, 10); // int to base 10 string
 
@@ -1385,20 +1429,20 @@ void gotLevel(int level) {
   //Serial.println(level);
   doRandTransition(0, 64, true); // fast Fadeout with fill
   
-  loadGlyph35('E', 0, 0);
-  loadGlyph35('n', 4, 0);
-  loadGlyph35('t', 8, 0);
-  loadGlyph35('r', 12, 0);
-  loadGlyph35('a', 16, 0);
-  loadGlyph35('n', 20, 0);
-  loadGlyph35('c', 24, 0);
-  loadGlyph35('e', 28, 0);
+  loadGlyph35('E', 0, 2);
+  loadGlyph35('n', 4, 2);
+  loadGlyph35('t', 8, 2);
+  loadGlyph35('r', 12, 2);
+  loadGlyph35('a', 16, 2);
+  loadGlyph35('n', 20, 2);
+  loadGlyph35('c', 24, 2);
+  loadGlyph35('e', 28, 2);
 
-  loadGlyph35('F', 6, 6);
-  loadGlyph35('o', 10, 6);
-  loadGlyph35('u', 14, 6);
-  loadGlyph35('n', 18, 6);
-  loadGlyph35('d', 22, 6);
+  loadGlyph35('F',  6, 8);
+  loadGlyph35('o', 10, 8);
+  loadGlyph35('u', 14, 8);
+  loadGlyph35('n', 18, 8);
+  loadGlyph35('d', 22, 8);
 
   itoa(level, snum, 10); // int to base 10 string
 
@@ -1418,10 +1462,85 @@ void gotLevel(int level) {
   doRandTransition(1, 64, false); // Fast fade-in without fill
 }
 
+void gotLocation() {
+  char snum[5];
+  int x, i = 0;
+  doRandTransition(0, 64, true); // Fast fade-out with fill
+  
+  x = random(0, 8);
+  switch(x) {
+    case 0: // Temple (LUCK)
+      loadGlyph35('t',  4, 2);
+      loadGlyph35('e',  8, 2);
+      loadGlyph35('m', 12, 2);
+      loadGlyph35('p', 16, 2);
+      loadGlyph35('l', 20, 2);
+      loadGlyph35('e', 24, 2);
+      i = random(1, 3);
+      
+      loadGlyph35('L',  0, 18);
+      loadGlyph35('U',  4, 18);
+      loadGlyph35('C',  8, 18);
+      loadGlyph35('K', 12, 18);
+      
+      pet.rpg.luck += i;
+      
+      break;
+    case 1: // GYM (Attack)
+    case 2: // GYM (Defense)
+      loadGlyph35('g', 12, 0);
+      loadGlyph35('y', 16, 0);
+      loadGlyph35('m', 20, 0);
+      i = random(0, 2);
+      if (x == 0) {
+        pet.rpg.attack += i;
+        loadGlyph35('A', 0, 18);
+        loadGlyph35('T', 4, 18);
+        loadGlyph35('T', 8, 18);
+        i = pet.rpg.attack;
+      } else {
+        pet.rpg.defense += i;
+        loadGlyph35('D', 0, 18);
+        loadGlyph35('E', 4, 18);
+        loadGlyph35('F', 8, 18);
+        i = pet.rpg.defense;
+      }
+      break;
+    default: // Lower chance
+      loadGlyph35('R',  8, 2);
+      loadGlyph35('u', 12, 2);
+      loadGlyph35('i', 16, 2);
+      loadGlyph35('n', 20, 2);
+      loadGlyph35('s', 24, 2);
+  }
+  
+  loadGlyph35('F',  6, 8);
+  loadGlyph35('o', 10, 8);
+  loadGlyph35('u', 14, 8);
+  loadGlyph35('n', 18, 8);
+  loadGlyph35('d', 22, 8);
+  
+  itoa(i, snum, 10); // int to base 10 string
+  for (x = 0; x < 5; x++) {
+    if(snum[x] == 0x00)
+      break;
+  }
+  for (i = 0; i < x; i++) {
+    loadGlyph35(snum[i], ((5 - x) * 4) + (i * 4) + 6, 18);
+  }
+  drawPixels();
+  long tt = millis();
+  while (millis() - tt < 5000 / T_FPS) { // burn time watching touch
+    processTouch(false);
+    delay(10);
+  }
+  doRandTransition(1, 64, false); // Fast fade-in without fill
+}
+
 void doShiftTransition(bool lr) {
   uint8_t i;
   long tt;
-  for (i = 0; i < 32; i++) {
+  for (i = 0; i < 32 && !tdisp.in_stat; i++) {
     if (lr) {
       doOffset(1);
     } else {
@@ -1429,7 +1548,7 @@ void doShiftTransition(bool lr) {
     }
     drawPixels();
     tt = millis();
-    while (millis() - tt < (2000 / 32) / T_FPS) { // burn time watching touch
+    while (millis() - tt < (1000 / 32) / T_FPS) { // burn time watching touch
       processTouch(false);
       delay(10);
     }
@@ -1439,16 +1558,18 @@ void doShiftTransition(bool lr) {
 void doRandTransition(bool v, uint8_t fs, bool fill) {
   int x, y, z, r = 0;
   int todo = 32 * 32; // total pixels
-  if (v && fill) {
-    clearPixels();
-  } else if (!v && fill) {
-    fillPixels();
-  } else if(!fill) {
-    todo = 0;
+  if (fill) {
+    if (v) {
+      clearPixels();
+    } else {
+      fillPixels();
+    }
+  } else {
+    todo = 0; // Reset todo to zero
     for (y = 0; y < 32; y++) {
       for (x = 0; x < 32; x++) {
-        if(getPixel(x, y) != v) {
-          todo++;
+        if(getPixel(x, y) != v) { // If we have a set pixel
+          todo++; // Count it
         }
       }
     }
@@ -1466,7 +1587,6 @@ void doRandTransition(bool v, uint8_t fs, bool fill) {
         r = 0;
       } else {
         r++;
-        Serial.println(r);
       }
     }
     processTouch(false);
@@ -1476,7 +1596,7 @@ void doRandTransition(bool v, uint8_t fs, bool fill) {
   // Catch remaining blocks (fast)
   if (v) {
     fillPixels();
-  } else if (!v) {
+  } else {
     clearPixels();
   }
   drawPixels();
