@@ -7,7 +7,7 @@ Based on Python Emulator by ryesalvador: https://gist.github.com/ryesalvador/e88
   * Exploration mini-game
     * 1024 Pixel "Map", 256 "Steps"
     * Screen Transitions
-      * Random
+      * Random Static
       * Shift left/right
     * Locatable Level Entrances
       * Reset Steps to Zero

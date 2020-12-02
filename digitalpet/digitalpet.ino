@@ -101,7 +101,6 @@ void petSelectorIn() {
       drawTFTraw(b, (w * 5 + (w * 8)) + x * 8, h + y, 1);
     }
   }
-  tft.drawCircle((w * 5 + (w * 8)) + 12 + 4, h + 12 + 4, 12, tft.color565(10, 12, 6));
 }
 
 void petSelector(int sel) {
@@ -491,7 +490,6 @@ void libpet_clean() {
     pet.state.clean = false;
     libpet_tick(); // Must tick to catch warning
   }
-  
   libpet_display(false);
 }
 
@@ -668,14 +666,34 @@ void gfx_render() {
     }
     doOffset(tdisp.offset);
   }
-  //drawOverlay(OVERLAY_EAT, 4);
+  //drawOverlay(OVERLAY_STINK, 0);
   drawPixels(); // Render
+}
+
+void drawZigzag (int x, int y, int o, int h) {
+  for (int yy = y; yy < y + h; yy++) {
+    if (o) {
+        setPixel(x, yy, 1);
+        setPixel(x + 1, yy, 0);
+        o = 0;
+    } else {
+        setPixel(x, yy, 0);
+        setPixel(x + 1, yy, 1);
+        o = 1;
+    }
+  }
 }
 
 void drawOverlay(int id, int frame) {
   int x, y;
 
-  if (id == OVERLAY_EAT) {
+  if (id == OVERLAY_STINK) {
+    drawZigzag( 2,  5 - frame, 0, 6); // Left
+    drawZigzag( 5,  7 - frame, 1, 6); // Left
+    drawZigzag(24,  7 - frame, 0, 6); // Right
+    drawZigzag(27,  4 - frame, 0, 6); // Right
+    drawZigzag(28, 11 - frame, 1, 5); // Right
+  } else if (id == OVERLAY_EAT) {
     // Draw apple
     rectPixels(20, 9, 7, 6, 1, 1);
     setPixel(20, 14, 0); // rounding
@@ -711,15 +729,17 @@ void drawOverlay(int id, int frame) {
     }
   } else if (id == OVERLAY_CLEAN) {
     linePixels(1, 0, 1, 31, 1);
-  } else if (id == OVERLAY_EXLAIM && frame == 0) {
-    // Draw top of mark
-    linePixels(4, 2, 4, 8, 1);
-    linePixels(5, 1, 5, 9, 1);
-    linePixels(6, 2, 6, 8, 1);
+  } else if (id == OVERLAY_EXLAIM) {
+    if (frame == 0) {
+      // Draw top of mark
+      linePixels(4, 2, 4, 8, 1);
+      linePixels(5, 1, 5, 9, 1);
+      linePixels(6, 2, 6, 8, 1);
 
-    // Replace with 35font plus?
-    linePixels(5, 11, 5, 13, 1);
-    linePixels(4, 12, 6, 12, 1);
+      // Replace with 35font plus?
+      linePixels(5, 11, 5, 13, 1);
+      linePixels(4, 12, 6, 12, 1);
+    }
   } else if (id == OVERLAY_DEAD) {
     // Skull
     rectPixels(22 - frame, 2, 5, 6, 1, 1); // center
@@ -740,9 +760,6 @@ void drawOverlay(int id, int frame) {
         switch(id) {
           case OVERLAY_ZZZ: // Overlay Zzz [2 frames]
             pixbuf[y][x] |= reverse(pgm_read_byte(&(gfx_overlayZzz[frame][y][x])));
-            break;
-          case OVERLAY_STINK: // Overlay Stink [2 frames]
-            pixbuf[y][x] |= reverse(pgm_read_byte(&(gfx_overlayStink[frame][y][x])));
             break;
         }
       }
