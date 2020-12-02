@@ -3,20 +3,24 @@ Based on Python Emulator by ryesalvador: https://gist.github.com/ryesalvador/e88
 
 * Enhancements
   * Partial RPG + Economy Subsystem
+    * Mature pets must pay to eat
   * Exploration mini-game
     * 1024 Pixel "Map", 256 "Steps"
+    * Screen Transitions
+      * Random
+      * Shift left/right
     * Locatable Level Entrances
       * Reset Steps to Zero
       * Chance of entering at maximum reached depth
     * Locatable Coins
       * Max allowed return increases on level
+    * Random Locations
+      * Temple (Luck)
+      * Gym (Att / Def)
 
 * Planned Enhancements
-  * Semi-randomized pet generation
+  * Semi-randomized pet generation (If space is found)
   * Monster battles in Exploration mini-game
-  * Items + Item Bag
-    * Allow items to help manage feeding/cleaning the pet automatically
-    * Allow consumable items to increase/decrease the life span (reduce age) of a pet.
   * Locations
     * Locations will "train" your pet
       * Very rare locations will train "magic"

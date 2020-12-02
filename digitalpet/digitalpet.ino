@@ -455,7 +455,7 @@ void loop(void) {
 }
 
 void libpet_eat() {
-  if (pet.hunger >= ENABLE_EAT && pet.state.alive && !pet.state.sleep && !pet.state.clean && pet.stage > 0 && !pet.state.explore) {
+  if (pet.hunger >= ENABLE_EAT && pet.state.alive && !pet.state.sleep && !pet.state.clean && !pet.state.eat && pet.stage > 0 && !pet.state.explore) {
     if (pet.stage >= 2) { // if adult
       if (pet.rpg.coins < EAT_ADU_COST) { // Cant afford to eat
         // Show No Coin animation
@@ -1395,8 +1395,8 @@ void libpet_explore() {
       delay(10);
     }
   }
-  pet.state.explore = false;
   doRandTransition(0, 8, false); // Exit transition
+  pet.state.explore = false;
 }
 
 void gotCoins(int count) {
