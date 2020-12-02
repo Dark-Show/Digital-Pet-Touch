@@ -1207,7 +1207,7 @@ int calculateXByte(int l) {
 }
 
 void libpet_explore() {
-  int8_t l = 0, t, x, y, bx, by, r[EXPLORE_HIDE][2];
+  int8_t l = 0, t, jm, x, y, bx, by, r[EXPLORE_HIDE + pet.rpg.luck][2];
   uint8_t bpb[32][4], bpx; // Back-up pixel buffer and vars
   bool restore = false; // restore backup pixel buffer
   bool hide = true;
@@ -1230,10 +1230,10 @@ void libpet_explore() {
   pet.rpg.coins -= EXPLORE_COST;
   
   doRandTransition(1, 8, true); // frameskip 8 seems nice
+  fillPixels(); // Fill real pixel buffer
   // Set starting co-ordinates
   x = random(0, 32);
   y = random(0, 32);
-  fillPixels(); // Fill real pixel buffer
 
   drawPixels();
 
@@ -1241,6 +1241,7 @@ void libpet_explore() {
     if (hide) {
       hide = false;
       // Hide stuff
+      //Serial.println("Hide");
       for (j = 0; j < EXPLORE_HIDE + pet.rpg.luck; j++) { // Increase with luck
         r[j][0] = random(0, 32);
         r[j][1] = random(0, 32);
@@ -1252,9 +1253,10 @@ void libpet_explore() {
     bpx = calculateXByte(x);
     bpb[y][bpx] &= ~(1 << (7 - (x - bpx * 8))); // Set backup
 
+    //Serial.println("Explore");
     // Explore
     do {
-      t = random(-8, 8);
+      t = random(-8, 9);    
       // Not sure if we need these extra random lines
       switch(t) {
         case -8:
@@ -1289,22 +1291,29 @@ void libpet_explore() {
           if (x > 31)
             x = 31;
           break;
+        default:
+          break;
       }
     } while (!getPixel(x, y));
 
+    // Serial.println("Find");
+
     // Check for find
-    for (j = 0; j < EXPLORE_HIDE + pet.rpg.luck; j++) {
+    jm = EXPLORE_HIDE + pet.rpg.luck; // Luck can change mid lood
+    for (j = 0; j < jm; j++) {
       if (x == r[j][0] && y == r[j][1]) { // found something
         // What did we find?
         switch(random(0, 65)) {
           case 14: // Location
           case  7:
+            // Serial.println("Location");
             gotLocation();
             break;
           case 60: // deep level entrance (our highest level)
           case 50:
           case 40:
           case 30:
+            // Serial.println("Deep");
             i = 0; // reset steps
             if (explorer_high == l) {
               explorer_high++;
@@ -1317,6 +1326,7 @@ void libpet_explore() {
           case 20: // next level entrance
           case 10:
           case  0:
+            // Serial.println("Level");
             i = 0; // reset steps
             gotLevel(++l);
             if(explorer_high < l)
@@ -1325,11 +1335,13 @@ void libpet_explore() {
             hide = true;
             break;
           case 64: // big coins
+            // Serial.println("c");
             gotCoins(random(100, (20 * l) + 200)); // Level bonus
             restore = true;
             break;
           case 32: // medium coins
           case 16:
+            // Serial.println("c");
             gotCoins(random(20, (10 * l) + 100)); // Level bonus
             restore = true;
             break;
@@ -1478,10 +1490,10 @@ void gotLocation() {
       loadGlyph35('e', 24, 2);
       i = random(1, 3);
       
-      loadGlyph35('L',  0, 18);
-      loadGlyph35('U',  4, 18);
-      loadGlyph35('C',  8, 18);
-      loadGlyph35('K', 12, 18);
+      loadGlyph35('l',  0, 18);
+      loadGlyph35('u',  4, 18);
+      loadGlyph35('c',  8, 18);
+      loadGlyph35('k', 12, 18);
       
       pet.rpg.luck += i;
       
@@ -1494,27 +1506,27 @@ void gotLocation() {
       i = random(0, 2);
       if (x == 0) {
         pet.rpg.attack += i;
-        loadGlyph35('A', 0, 18);
-        loadGlyph35('T', 4, 18);
-        loadGlyph35('T', 8, 18);
+        loadGlyph35('a', 0, 18);
+        loadGlyph35('t', 4, 18);
+        loadGlyph35('t', 8, 18);
         i = pet.rpg.attack;
       } else {
         pet.rpg.defense += i;
-        loadGlyph35('D', 0, 18);
-        loadGlyph35('E', 4, 18);
-        loadGlyph35('F', 8, 18);
+        loadGlyph35('d', 0, 18);
+        loadGlyph35('e', 4, 18);
+        loadGlyph35('f', 8, 18);
         i = pet.rpg.defense;
       }
       break;
     default: // Nothing
-      loadGlyph35('R',  6, 2);
+      loadGlyph35('r',  6, 2);
       loadGlyph35('u', 10, 2);
       loadGlyph35('i', 14, 2);
       loadGlyph35('n', 18, 2);
       loadGlyph35('s', 22, 2);
   }
   
-  loadGlyph35('F',  6, 8);
+  loadGlyph35('f',  6, 8);
   loadGlyph35('o', 10, 8);
   loadGlyph35('u', 14, 8);
   loadGlyph35('n', 18, 8);
