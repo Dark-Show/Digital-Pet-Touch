@@ -309,7 +309,6 @@ void libpet_init(){
   pet.energy    = 256;
   pet.waste     = 0;
   pet.age       = 0;
-  pet.happiness = 0;
   pet.stage     = 0;
   pet.state.eat    = false;
   pet.state.sleep  = false;
@@ -355,13 +354,11 @@ void libpet_tick() {
     // Random event
     switch(random(31)) {
       case 4:
-        pet.happiness -= 1; // Dec happiness
-        break;
       case 7:
-        pet.happiness += 1; // Inc happiness
+        pet.rpg.coins += 1; // small inc coin
         break;
       case 8:
-        pet.rpg.coins += 5; // small inc coin
+        pet.rpg.coins += 5; // medium inc coin
         break;
       case 9:
         pet.rpg.coins += 10; // large inc coin
@@ -386,11 +383,7 @@ void libpet_tick() {
     }
     pet.energy -= 1;
     pet.age += 2;
-    if (pet.waste >= WASTE_SICK){
-      pet.happiness -= 1;
-    }
     if (pet.energy < FORCE_SLEEP && pet.stage > 0) {
-      pet.happiness -= 64;
       pet.state.sleep = true; // Force to sleep
     }
     // Visual states update
@@ -428,8 +421,6 @@ void loop(void) {
     Serial.print(pet.hunger);
     Serial.print(F(" WASTE:"));
     Serial.print(pet.waste);
-    Serial.print(F(" HAPPINESS:"));
-    Serial.println(pet.happiness);
     */
     lastTick = millis(); // Record last tick time
     libpet_tick(); // Execute tick
@@ -1604,7 +1595,7 @@ int gotBattle() {
         loadGlyph35('i', 14, 16);
         loadGlyph35('t', 18, 16);
         if (turn) { // user
-          //ehp -= abs((pet.rpg.attack + 1) - (def / 2));
+          ehp -= abs((pet.rpg.attack + 1) - (def / 2));
         } else { // enemy
           hp -= 4*abs(att - (pet.rpg.defense / 2));
         }
@@ -1618,7 +1609,7 @@ int gotBattle() {
         loadGlyph35('i', 25, 16);
         loadGlyph35('t', 29, 16);
         if (turn) { // user
-          //ehp -= abs(((pet.rpg.attack + 1) / 2) - (def / 2));
+          ehp -= abs(((pet.rpg.attack + 1) / 2) - (def / 2));
         } else { // enemy
           hp -= abs((att / 2) - (pet.rpg.defense / 2));
         }
@@ -1733,8 +1724,4 @@ void doRandTransition(bool v, uint8_t fs, bool fill) {
     clearPixels();
   }
   drawPixels();
-}
-
-uint8_t getExpLevel() {
-//  uint8_t l = pow(pet.rpg.experience);
 }
