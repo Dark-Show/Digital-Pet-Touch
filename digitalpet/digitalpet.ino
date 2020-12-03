@@ -332,7 +332,6 @@ void libpet_init(){
   pet.rpg.attack     = random(0, 4);
   pet.rpg.defense    = random(0, 4);
   pet.rpg.luck       = random(0, 8);
-  pet.rpg.magic      = random(0, 1);
   pet.rpg.experience = 0;
   pet.rpg.level      = 0;
 }
@@ -838,9 +837,8 @@ void drawAnimation(int id, int frame) {
 void drawDisplay(int id) {
   int xx, yy, px;
   uint8_t p;
-  
-  uint8_t x = 0, i = 0;
   char snum[5];
+  uint8_t c = 0, i = 0;
   
   switch(id) {
     case DISPLAY_STAT1: // Display Hunger
@@ -888,67 +886,42 @@ void drawDisplay(int id) {
       // Coins
       loadGlyph35('5', 2,  8);
       linePixels(3, 7, 3, 13, 1);
-      // Numeric Reading
-      itoa(pet.rpg.coins, snum, 10); // int to base 10 string
-
-      // Count digits
-      for (x = 0; x < 5; x++) {
-        if(snum[x] == 0x00)
-          break;
-      }
-      for (i = 0; i < x; i++) {
-        loadGlyph35(snum[i], ((5 - x) * 4) + (i * 4) + 13, 8); // Draw them aligned right
-      }
+      drawNumber(pet.rpg.coins, 13, 8); // Numeric Reading
 
       // Luck
       loadGlyph35('L', 2,  15);
       loadGlyph35('U', 6,  15);
-      loadGlyph35('C', 10,  15);
-      loadGlyph35('K', 14,  15);
-      // Numeric Reading
-      itoa(pet.rpg.luck, snum, 10); // int to base 10 string
-
-      // count digits
-      for (x = 0; x < 5; x++) {
-        if(snum[x] == 0x00)
-          break;
-      }
-      for (i = 0; i < x; i++) {
-        loadGlyph35(snum[i], ((5 - x) * 4) + (i * 4) + 13, 15); // Draw them aligned right
-      }
+      loadGlyph35('C', 10, 15);
+      loadGlyph35('K', 14, 15);
+      drawNumber(pet.rpg.luck, 13, 15); // Numeric Reading
 
       // Attack
       loadGlyph35('A', 2,  21);
       loadGlyph35('T', 6,  21);
-      loadGlyph35('T', 10,  21);
-      // Numeric Reading
-      itoa(pet.rpg.attack, snum, 10); // int to base 10 string
-
-      // count digits
-      for (x = 0; x < 5; x++) {
-        if(snum[x] == 0x00)
-          break;
-      }
-      for (i = 0; i < x; i++) {
-        loadGlyph35(snum[i], ((5 - x) * 4) + (i * 4) + 13, 21); // Draw them aligned right
-      }
+      loadGlyph35('T', 10, 21);
+      drawNumber(pet.rpg.attack, 13, 21); // Numeric Reading
 
       // Defense
       loadGlyph35('D', 2,  27);
       loadGlyph35('E', 6,  27);
-      loadGlyph35('F', 10,  27);
-      // Numeric Reading
-      itoa(pet.rpg.defense, snum, 10); // int to base 10 string
-
-      // count digits
-      for (x = 0; x < 5; x++) {
-        if(snum[x] == 0x00)
-          break;
-      }
-      for (i = 0; i < x; i++) {
-        loadGlyph35(snum[i], ((5 - x) * 4) + (i * 4) + 13, 27); // Draw them aligned right
-      }
+      loadGlyph35('F', 10, 27);
+      drawNumber(pet.rpg.defense, 13, 27); // Numeric Reading
       break;
+  }
+}
+
+void drawNumber(int num, int x, int y) {
+  char snum[5];
+  int c, i;
+  itoa(num, snum, 10); // int to base 10 string
+  
+  // count digits
+  for (c = 0; c < 5; c++) {
+    if(snum[c] == 0x00)
+      break;
+  }
+  for (i = 0; i < c; i++) {
+    loadGlyph35(snum[i], ((5 - c) * 4) + (i * 4) + x, y); // Draw them aligned right
   }
 }
 
@@ -1221,8 +1194,7 @@ void libpet_explore() {
   int8_t l = 0, t, jm, x, y, bx, by, r[EXPLORE_HIDE + pet.rpg.luck][2];
   uint8_t bpb[32][4], bpx; // Back-up pixel buffer and vars
   bool restore = false; // restore backup pixel buffer
-  bool hide = true;
-  bool fill = true;
+  bool hide = true, fill = true, gend = false;
   long tt;
   int i, j, fitems = 0;
 
@@ -1248,7 +1220,7 @@ void libpet_explore() {
 
   drawPixels();
 
-  for (i = 0; i < 256; i++) { // 256 steps
+  for (i = 0; i < 256 && !gend; i++) { // 256 steps
     if (hide) {
       hide = false;
       // Hide stuff
@@ -1315,6 +1287,11 @@ void libpet_explore() {
       if (x == r[j][0] && y == r[j][1]) { // found something
         // What did we find?
         switch(random(0, 65)) {
+          case 15: // Battle
+            if(!gotBattle()) {
+              gend = true;
+            }
+            break;
           case 14: // Location
           case  7:
             // Serial.println("Location");
@@ -1391,8 +1368,6 @@ void libpet_explore() {
     }
 
     drawPixels();
-    //delay(10); // DEBUG
-    //delay(1000 / (T_FPS * 4)); // 2 - 4 Seems nicely balanced
     tt = millis();
     while (millis() - tt < 1000 / (T_FPS * 4)) { // burn time watching touch
       processTouch(false);
@@ -1424,18 +1399,9 @@ void gotCoins(int count) {
   loadGlyph35('u', 14, 8);
   loadGlyph35('n', 18, 8);
   loadGlyph35('d', 22, 8);
-
-  itoa(count, snum, 10); // int to base 10 string
-
-  // count digits
-  for (x = 0; x < 5; x++) {
-    if(snum[x] == 0x00)
-      break;
-  }
-  for (i = 0; i < x; i++) {
-    loadGlyph35(snum[i], ((5 - x) * 4) + (i * 4) + 6, 18);
-  }
+  drawNumber(count, 6, 18);
   drawPixels();
+  
   long tt = millis();
   while (millis() - tt < 5000 / T_FPS) { // burn time watching touch
     processTouch(false);
@@ -1465,22 +1431,14 @@ void gotLevel(int level) {
   loadGlyph35('u', 14, 8);
   loadGlyph35('n', 18, 8);
   loadGlyph35('d', 22, 8);
-
-  itoa(level, snum, 10); // int to base 10 string
-
-  for (x = 0; x < 5; x++) {
-    if(snum[x] == 0x00)
-      break;
-  }
-  for (i = 0; i < x; i++) {
-    loadGlyph35(snum[i], ((5 - x) * 4) + (i * 4) + 6, 18);
-  }
+  drawNumber(level, 6, 18);
   drawPixels();
   long tt = millis();
   while (millis() - tt < 5000 / T_FPS) { // burn time watching touch
     processTouch(false);
     delay(10);
   }
+  getExperience(random(1, 50));
   doRandTransition(1, 64, false); // Fast fade-in without fill
 }
 
@@ -1505,7 +1463,7 @@ void gotLocation() {
       loadGlyph35('u',  4, 18);
       loadGlyph35('c',  8, 18);
       loadGlyph35('k', 12, 18);
-      
+      getExperience(random(1, 100));
       pet.rpg.luck += i;
       
       break;
@@ -1515,6 +1473,7 @@ void gotLocation() {
       loadGlyph35('y', 16, 0);
       loadGlyph35('m', 20, 0);
       i = random(0, 2);
+      getExperience(random(1, 100));
       if (x == 0) {
         pet.rpg.attack += i;
         loadGlyph35('a', 0, 18);
@@ -1536,7 +1495,6 @@ void gotLocation() {
       loadGlyph35('n', 18, 2);
       loadGlyph35('s', 22, 2);
   }
-  
   loadGlyph35('f',  6, 8);
   loadGlyph35('o', 10, 8);
   loadGlyph35('u', 14, 8);
@@ -1544,22 +1502,172 @@ void gotLocation() {
   loadGlyph35('d', 22, 8);
 
   if (x < 4) { // If we are not Ruins
-    itoa(i, snum, 10); // int to base 10 string
-    for (x = 0; x < 5; x++) {
-      if(snum[x] == 0x00)
-        break;
-    }
-    for (i = 0; i < x; i++) {
-      loadGlyph35(snum[i], ((5 - x) * 4) + (i * 4) + 6, 18);
-    }
+    drawNumber(i, 6, 18);
   }
-    drawPixels();
+  drawPixels();
   long tt = millis();
   while (millis() - tt < 5000 / T_FPS) { // burn time watching touch
     processTouch(false);
     delay(10);
   }
   doRandTransition(1, 64, false); // Fast fade-in without fill
+}
+
+int gotBattle() {
+  long tt;
+  int hp, hpb, ehp, ehpb, att, def, x, turn = random(0, 2);
+  doRandTransition(0, 64, true); // Fast fade-out with fill
+  hp = 100; hpb = 100;
+  x = random(0, 9);
+  switch(x) {
+    case 0: // DRAGON (HARD)
+      loadGlyph35('d',  4, 2);
+      loadGlyph35('r',  8, 2);
+      loadGlyph35('a', 12, 2);
+      loadGlyph35('g', 16, 2);
+      loadGlyph35('o', 20, 2);
+      loadGlyph35('n', 24, 2);
+      ehp = random(50, 200);
+      att = random(1, 10);
+      def = random(1, 8);
+      break;
+    default: // Snake (EASY)
+      loadGlyph35('s',  6, 2);
+      loadGlyph35('n', 10, 2);
+      loadGlyph35('a', 14, 2);
+      loadGlyph35('k', 18, 2);
+      loadGlyph35('e', 22, 2);
+      ehp = random(10, 50);
+      att = random(1, 4);
+      def = random(1, 3);
+  }
+  ehpb = ehp;
+  loadGlyph35('a', 1, 8);
+  loadGlyph35('t', 5, 8);
+  loadGlyph35('t', 9, 8);
+  loadGlyph35('a', 13, 8);
+  loadGlyph35('c', 17, 8);
+  loadGlyph35('k', 21, 8);
+  loadGlyph35('e', 25, 8);
+  loadGlyph35('d', 29, 8);
+  drawPixels();
+
+  // delay
+  tt = millis();
+  while (millis() - tt < 2000 / T_FPS) { // burn time watching touch
+    processTouch(false);
+    delay(10);
+  }
+
+  
+
+  while (ehp > 0 && hp > 0) {
+    
+    rectPixels(1, 8, 31, 5, 0, 1);
+    drawProgress(ehp, 0, ehpb, 8);  // Enemy
+    rectPixels(2, 25, 30, 5, 0, 1);
+    drawProgress(hp,  0,  hpb, 25); // Us
+    drawPixels();
+    
+    if (turn) { // Player turn
+      turn = 0;
+      rectPixels(2, 25, 30, 5, 0, 1); // Clear
+      drawProgress(hp,  0,  hpb, 23); // Us
+      drawPixels();
+      rectPixels(2, 23, 30, 5, 0, 1); // Clear
+      delay(250);
+      drawProgress(hp,  0,  hpb, 25); // Us
+    } else {
+      turn = 1;
+      rectPixels(1, 8, 31, 5, 0, 1); // Clear
+      drawProgress(ehp, 0, ehpb, 10);  // Enemy
+      drawPixels();
+      rectPixels(2, 10, 30, 5, 0, 1);
+      delay(250);
+      drawProgress(ehp, 0, ehpb, 8);  // Enemy
+    }
+    drawPixels();
+    delay(250);
+    rectPixels(0, 16, 32, 5, 0, 1); // Clear
+    switch(random(0, 8)) {
+      case 0: // miss
+      case 4:
+        loadGlyph35('m',  8, 16);
+        loadGlyph35('i', 12, 16);
+        loadGlyph35('s', 16, 16);
+        loadGlyph35('s', 20, 16);
+        break;
+      case 1: // hit
+      case 2:
+      case 3:
+        loadGlyph35('h', 10, 16);
+        loadGlyph35('i', 14, 16);
+        loadGlyph35('t', 18, 16);
+        if (turn) { // user
+          //ehp -= abs((pet.rpg.attack + 1) - (def / 2));
+        } else { // enemy
+          hp -= 4*abs(att - (pet.rpg.defense / 2));
+        }
+        break;
+      default: // weak hit
+        loadGlyph35('w', 1, 16);
+        loadGlyph35('e', 5, 16);
+        loadGlyph35('a', 9, 16);
+        loadGlyph35('k', 13, 16);
+        loadGlyph35('h', 21, 16);
+        loadGlyph35('i', 25, 16);
+        loadGlyph35('t', 29, 16);
+        if (turn) { // user
+          //ehp -= abs(((pet.rpg.attack + 1) / 2) - (def / 2));
+        } else { // enemy
+          hp -= abs((att / 2) - (pet.rpg.defense / 2));
+        }
+        break;
+    }
+    drawPixels();
+    tt = millis();
+    while (millis() - tt < 2000 / T_FPS) { // burn time watching touch
+      processTouch(false);
+      delay(10);
+    }
+  }
+
+  rectPixels(1, 8, 31, 5, 0, 1);
+  drawProgress(ehp, 0, ehpb, 8);  // Enemy
+  rectPixels(2, 25, 30, 5, 0, 1);
+  drawProgress(hp,  0,  hpb, 25); // Us
+  drawPixels();
+  delay(250);
+  
+  doRandTransition(1, 64, false); // Fast fade-in without fill
+
+  // Who won?
+  if(hp > 0) { // User
+    if(x == 0) {
+      gotCoins(random(100, 100 * att));
+      getExperience(random(25, 50 * att));
+    } else {
+      gotCoins(random(1, 25));
+      getExperience(random(25, 50));
+    }
+    return 1;
+  } else { // Enemy
+    getExperience(random(1, 10));
+    return 0 ;
+  }
+}
+
+void getExperience(int a){
+  pet.rpg.experience += a;
+  while (pet.rpg.experience >= 500) {
+    pet.rpg.experience -= 500;
+    if(random(0, 2)){ // attack
+      pet.rpg.attack++;
+    } else {
+      pet.rpg.defense++;
+    }
+    //Serial.println(pet.rpg.experience);
+  }
 }
 
 void doShiftTransition(bool lr) {

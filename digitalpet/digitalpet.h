@@ -17,8 +17,8 @@
  */
 
 // Timing Settings
-#define T_TICK  1  // Loops of game code per second
-#define T_FPS   2  // Frames per second
+#define T_TICK  1   // Loops of game code per second
+#define T_FPS   2   // Frames per second
 
 // Gameplay Settings
 #define AGE_MOVE        64
@@ -87,7 +87,6 @@ struct tama_state {
 struct tama_rpg {
    int8_t attack;
    int8_t defense;
-   int8_t magic;
    int8_t luck;
    uint8_t experience;
    uint8_t level;
