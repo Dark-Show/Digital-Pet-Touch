@@ -2,9 +2,9 @@
 Based on Python Emulator by ryesalvador: https://gist.github.com/ryesalvador/e88cb2b4bbe0694d175ef2d7338abd07
 
 * Enhancements
-  * Partial RPG + Economy Subsystem
+  * Simple RPG + Economy Subsystem
     * Mature pets must pay to eat
-  * Exploration mini-game
+  * Exploration Mini-Game
     * 1024 Pixel "Map", 256 "Steps"
     * Screen Transitions
       * Random Static
@@ -17,13 +17,13 @@ Based on Python Emulator by ryesalvador: https://gist.github.com/ryesalvador/e88
     * Random Locations
       * Temple (Luck)
       * Gym (Att / Def)
+    * Monster Battles
+      * Snake (EASY)
+      * Dragon (HARD)
+    * Simple Experience System
 
 * Planned Enhancements
-  * Semi-randomized pet generation (If space is found)
-  * Monster battles in Exploration mini-game
   * Locations
-    * Locations will "train" your pet
-      * Very rare locations will train "magic"
     * Rare locations can increase/decrease life span
 
 # Currently Supported Hardware
