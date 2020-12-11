@@ -17,12 +17,14 @@
  */
 
 #define KEYESTUDIO28LCD  // Keyestudio 2.8" LCD Shield (ILI9328)
+//#define ADAFRUIT28LCD // Adafruit 2.8" Arduino LCD Shield
 
 #include "pet_gfx.h";    // After graphics are defined
 #include "digitalpet.h";
 
 void setup(void) {
   Serial.begin(115200);
+#ifdef _TFTLCD_ILI932X_H_
   tft.reset();
   
   uint16_t identifier = tft.readID();
@@ -47,6 +49,7 @@ void setup(void) {
       //  delay(100);
       //}
   }
+#endif
 
   lcd_w = tft.width();
   lcd_h = tft.height();
@@ -178,12 +181,17 @@ void processTouch(bool sr) {
   int i; // Temp Variable
   int ay = round(lcd_h * T_SELS) + ((T_PIXS + T_PIXG) * 32) + T_BUTP; // Calculate active y
   int bsize = round(lcd_w / 3); // button size
-#ifdef _ADAFRUIT_TOUCHSCREEN_H_
+#if defined(_ADAFRUIT_TOUCHSCREEN_H_) || defined(_ADAFRUIT_STMPE610H_)
+#ifdef _ADAFRUIT_STMPE610H_
+  TS_Point p = touch.getPoint(); // Get Touch Point
+#elif defined(_ADAFRUIT_TOUCHSCREEN_H_)
   TSPoint p = touch.getPoint(); // Get Touch Point
+
   pinMode(TOUCH_XM, OUTPUT); // Restore Direction (Shared)
   pinMode(TOUCH_YP, OUTPUT); // Restore Direction (Shared)
   //pinMode(TOUCH_XP, OUTPUT); // Restore Direction
   //pinMode(TOUCH_YM, OUTPUT); // Restore Direction
+#endif
 
   /*
   // Helpful for calibration
