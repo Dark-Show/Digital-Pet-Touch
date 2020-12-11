@@ -40,7 +40,8 @@
 #define ENABLE_CLEAN    32
 #define WASTE_SICK     256
 
-#define EXPLORE_HIDE     8 // + rpg.luck
+#define EXPLORE_HIDE    16 // (+luck) Explore fun factor // Medium Return
+//#define EXPLORE_HIDE    8 // (+luck) Explore fun factor // Low Return (1st run expected 0~50 coins)
 #define EXPLORE_COST    50 // Explore cost
 #define EAT_ADU_COST     5 // Adult eating cost
 #define COIN_DEFAULT   100 // Default coins for new pets
