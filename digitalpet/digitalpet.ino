@@ -16,8 +16,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#define KEYESTUDIO28LCD  // Keyestudio 2.8" LCD Shield (ILI9328)
-//#define ADAFRUIT28LCD // Adafruit 2.8" Arduino LCD Shield
+// LCD Touch Shield Selection (One only)
+#define KEYESTUDIO28LCD // Keyestudio 2.8" LCD Shield (ILI9328) [Good]
+//#define ADAFRUIT28LCD // Adafruit 2.8" Arduino LCD Shield (ILI9341) [Touch needs debugging]
 
 #include "pet_gfx.h";    // After graphics are defined
 #include "digitalpet.h";
@@ -45,9 +46,26 @@ void setup(void) {
       Serial.print(identifier, HEX);
       Serial.println(")");
       
-      //while(1) {
-      //  delay(100);
-      //}
+      while(1) {
+        delay(100);
+      }
+  }
+#endif
+#ifdef _TFTLCD_ILI9341_H_
+  tft.reset();
+  
+  uint16_t identifier = tft.readID();
+  switch(identifier) {
+    case 0x9341: // ILI9341
+      break;
+    default:
+      Serial.print(F("LCD Unknown ("));
+      Serial.print(identifier, HEX);
+      Serial.println(")");
+      
+      while(1) {
+        delay(100);
+      }
   }
 #endif
 

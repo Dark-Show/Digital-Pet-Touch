@@ -22,11 +22,20 @@ Based on Python Emulator by ryesalvador: https://gist.github.com/ryesalvador/e88
       * Dragon (HARD)
     * Simple Experience System
 
-* Planned Enhancements
-  * Locations
-    * Rare locations can increase/decrease life span
-
 # Currently Supported Hardware
-
  * ILI932X
    * [Keyestudio 2.8" LCD Shield](https://www.keyestudio.com/products/keyestudio-28-inch-240320-tft-lcd-shield-for-arduino-uno-r3)
+
+# YouTube Demo
+[![Digital Pet Demo](https://img.youtube.com/vi/8PmTnB564RI/0.jpg)](http://www.youtube.com/watch?v=8PmTnB564RI)
+
+# Installation
+
+ * Official Libraries (Install from Arduino IDE):
+   * "TouchScreen" by Adafruit
+   * "GFX Library" by Adafruit
+   * "BusIO" by Adafruit
+
+ * Custom Libraries (Manual install):
+   * TFTLCD Chopped: [Link](https://github.com/Dark-Show/TFTLCD-Chopped)
+
