@@ -33,14 +33,6 @@ void setup(void) {
     case 0x9325: // ILI9325
     case 0x9328: // ILI9328
       break;
-    /*
-    case 0x9341: // ILI9341
-      break;
-    case 0x7575: // HX8347G
-      break;
-    case 0x8357: // HX8357D
-      break;
-    */
     default:
       Serial.print(F("LCD Unknown ("));
       Serial.print(identifier, HEX);
@@ -57,6 +49,40 @@ void setup(void) {
   uint16_t identifier = tft.readID();
   switch(identifier) {
     case 0x9341: // ILI9341
+      break;
+    default:
+      Serial.print(F("LCD Unknown ("));
+      Serial.print(identifier, HEX);
+      Serial.println(")");
+      
+      while(1) {
+        delay(100);
+      }
+  }
+#endif
+#ifdef _TFTLCD_HX8347G_H_
+  tft.reset();
+  
+  uint16_t identifier = tft.readID();
+  switch(identifier) {
+    case 0x7575: // HX8347G
+      break;
+    default:
+      Serial.print(F("LCD Unknown ("));
+      Serial.print(identifier, HEX);
+      Serial.println(")");
+      
+      while(1) {
+        delay(100);
+      }
+  }
+#endif
+#ifdef _TFTLCD_HX8357D_H_
+  tft.reset();
+  
+  uint16_t identifier = tft.readID();
+  switch(identifier) {
+    case 0x8357: // HX8357D
       break;
     default:
       Serial.print(F("LCD Unknown ("));

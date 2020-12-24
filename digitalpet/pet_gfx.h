@@ -113,3 +113,13 @@
   #include <TFTLCD_ILI9341.h>  // Chopped Adafruit ILI9341 driver
   TFTLCD_ILI9341 tft(LCD_CS, LCD_CD, LCD_WR, LCD_RD, LCD_RESET);
 #endif
+
+#ifdef DRIVER_CHOPPED_TFTLCD_HX8347G
+  #include <TFTLCD_HX8347G.h>  // Chopped Adafruit HX8347G driver
+  TFTLCD_HX8347G tft(LCD_CS, LCD_CD, LCD_WR, LCD_RD, LCD_RESET);
+#endif
+
+#ifdef DRIVER_CHOPPED_TFTLCD_HX8357D
+  #include <TFTLCD_HX8357D.h>  // Chopped Adafruit HX8357D driver
+  TFTLCD_HX8357D tft(LCD_CS, LCD_CD, LCD_WR, LCD_RD, LCD_RESET);
+#endif
