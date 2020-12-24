@@ -17,7 +17,7 @@
  */
 
 //////////////////////////////
-// Tested Displays
+// Tested Working Displays
 //////////////////////////////
 
 #ifdef KEYESTUDIO28LCD // Keyestudio 2.8" LCD Shield Hardware
@@ -28,6 +28,10 @@
   #define DEFCONF_ADAFRUIT_TFTLCD      // Adafruit TFTLCD Default Configuration
   #define DEFCONF_ADAFRUIT_TOUCHSCREEN // Adafruit TouchScreen Default Configuration
 #endif
+
+//////////////////////////////
+// Unstable Displays
+//////////////////////////////
 
 #ifdef ADAFRUIT28LCD // Adafruit 2.8" Arduino LCD Shield
   #define DRIVER_ADAFRUIT_ILI9341 // Adafruit ILI9341 Driver
