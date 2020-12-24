@@ -17,29 +17,26 @@
  */
 
 //////////////////////////////
-// Tested Working Displays
+// Tested Working Shields
 //////////////////////////////
 
 #ifdef KEYESTUDIO28LCD // Keyestudio 2.8" LCD Shield Hardware
-  // Drivers
-  #define DRIVER_CHOPPED_TFTLCD_ILI932X  // Chopped Driver
-  #define DRIVER_ADAFRUIT_TOUCHSCREEN  // Adafruit TouchScreen
-  // Config
-  #define DEFCONF_ADAFRUIT_TFTLCD      // Adafruit TFTLCD Default Configuration
-  #define DEFCONF_ADAFRUIT_TOUCHSCREEN // Adafruit TouchScreen Default Configuration
+  #define DRIVER_CHOPPED_TFTLCD_ILI932X  // Adafruit Chopped TFTLCD Driver
+  #define DRIVER_ADAFRUIT_TOUCHSCREEN    // Adafruit TouchScreen Driver
+  #define DEFCONF_ADAFRUIT_TFTLCD        // Adafruit TFTLCD Default Configuration
+  #define DEFCONF_ADAFRUIT_TOUCHSCREEN   // Adafruit TouchScreen Default Configuration
 #endif
 
 //////////////////////////////
-// Unstable Displays
+// Unstable Shields
 //////////////////////////////
 
 #ifdef ADAFRUIT28LCD // Adafruit 2.8" Arduino LCD Shield
-  #define DRIVER_ADAFRUIT_ILI9341 // Adafruit ILI9341 Driver
-  #define DRIVER_ADAFRUIT_STMPE610 // Adafruit STMPE610 Touch Driver
+  #define DRIVER_ADAFRUIT_ILI9341  // Adafruit ILI9341 Driver
+  #define DRIVER_ADAFRUIT_STMPE610 // Adafruit STMPE610 Touch Driver [unstable]
   #define DEFCONF_ADAFRUIT_ILI9341
   #define DEFCONF_ADAFRUIT_STMPE610
 #endif
-
 
 //////////////////////////////
 // Default Configurations

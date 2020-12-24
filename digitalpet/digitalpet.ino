@@ -20,7 +20,7 @@
 #define KEYESTUDIO28LCD // Keyestudio 2.8" LCD Shield (ILI9328) [Good]
 //#define ADAFRUIT28LCD // Adafruit 2.8" Arduino LCD Shield (ILI9341) [Touch needs debugging]
 
-#include "pet_gfx.h";    // After graphics are defined
+#include "digitalpet_drivers.h";    // After graphics are defined
 #include "digitalpet.h";
 
 void setup(void) {

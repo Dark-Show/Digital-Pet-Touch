@@ -18,8 +18,8 @@
 
 // Timing Settings
 //#define T_TICK  16      // Debug
-#define T_TICK  1       // Demo
-//#define T_TICK  0.025   // Ship
+#define T_TICK  1       // Fast Demo
+//#define T_TICK  0.025   // Release
 #define T_FPS   2   // Frames per second
 
 // Gameplay Settings
@@ -41,11 +41,10 @@
 #define WASTE_SICK     256
 
 #define EXPLORE_HIDE    16 // (+luck) Explore fun factor // Medium Return
-//#define EXPLORE_HIDE    8 // (+luck) Explore fun factor // Low Return (1st run expected 0~50 coins)
+//#define EXPLORE_HIDE    8 // (+luck) Explore fun factor // Low Return
 #define EXPLORE_COST    50 // Explore cost
 #define EAT_ADU_COST     5 // Adult eating cost
 #define COIN_DEFAULT   100 // Default coins for new pets
-
 
 // Matrix Screen Adjustments
 #define T_SELS  0.12 // Multiplier (12% of screen)
