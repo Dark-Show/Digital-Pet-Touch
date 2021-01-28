@@ -31,6 +31,23 @@
 // Unstable Shields
 //////////////////////////////
 
+#ifdef ILI9486_35LCD_UNO
+  #define DRIVER_MCUFRIEND_KBV
+  #define DRIVER_ADAFRUIT_TOUCHSCREEN
+  #define TOUCH_YP    A1 // Pin Y+ (analog only: An) (Shared with LCD)
+  #define TOUCH_XM    A2 // Pin M- (analog only: An) (Shared with LCD)
+  #define TOUCH_YM     7 // Pin Y-
+  #define TOUCH_XP     6 // Pin X+
+  #define TOUCH_OHM  300 // Measured touch resistance in Ohms
+  #define TS_MINP     10 // Min Input Pressure
+  #define TS_MAXP   1000 // Max Input Preasure
+  #define TS_MINX    150 // Touch Min X Position
+  #define TS_MINY    170 // Touch Min Y Position
+  #define TS_MAXX    920 // Touch Max X Position
+  #define TS_MAXY    960 // Touch Max Y Position
+  #define TS_DEBO     50 // Touch controls debounce (Noisy touch?)
+#endif
+
 #ifdef ADAFRUIT28LCD // Adafruit 2.8" Arduino LCD Shield
   #define DRIVER_ADAFRUIT_ILI9341  // Adafruit ILI9341 Driver
   #define DRIVER_ADAFRUIT_STMPE610 // Adafruit STMPE610 Touch Driver [unstable]
@@ -99,6 +116,11 @@
 //////////////////////////////
 // Display Driver Selections
 //////////////////////////////
+
+#ifdef DRIVER_MCUFRIEND_KBV
+  #include <MCUFRIEND_kbv.h> // MCUFriend ILI9486 Driver
+  MCUFRIEND_kbv tft = MCUFRIEND_kbv(A3, A2, A1, A0, A4);
+#endif
 
 #ifdef DRIVER_ADAFRUIT_ILI9341
   #include <Adafruit_ILI9341.h>  // Adafruit ILI9341 Driver

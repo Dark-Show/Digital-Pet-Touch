@@ -17,7 +17,9 @@
  */
 
 // LCD Touch Shield Selection (One only)
-#define KEYESTUDIO28LCD // Keyestudio 2.8" LCD Shield (ILI9328) [Good]
+//#define KEYESTUDIO28LCD // Keyestudio 2.8" LCD Shield (ILI9328) [Good]
+#define ILI9486_35LCD_UNO // ILI9486 3.5" Touch Shield [Good]
+
 //#define ADAFRUIT28LCD // Adafruit 2.8" Arduino LCD Shield (ILI9341) [Touch needs debugging]
 
 #include "digitalpet_drivers.h";    // After graphics are defined
@@ -32,6 +34,7 @@ void setup(void) {
   switch(identifier) {
     case 0x9325: // ILI9325
     case 0x9328: // ILI9328
+      tft.begin();
       break;
     default:
       Serial.print(F("LCD Unknown ("));
@@ -49,6 +52,7 @@ void setup(void) {
   uint16_t identifier = tft.readID();
   switch(identifier) {
     case 0x9341: // ILI9341
+      tft.begin();
       break;
     default:
       Serial.print(F("LCD Unknown ("));
@@ -66,6 +70,7 @@ void setup(void) {
   uint16_t identifier = tft.readID();
   switch(identifier) {
     case 0x7575: // HX8347G
+      tft.begin();
       break;
     default:
       Serial.print(F("LCD Unknown ("));
@@ -83,6 +88,23 @@ void setup(void) {
   uint16_t identifier = tft.readID();
   switch(identifier) {
     case 0x8357: // HX8357D
+      tft.begin();
+      break;
+    default:
+      Serial.print(F("LCD Unknown ("));
+      Serial.print(identifier, HEX);
+      Serial.println(")");
+      
+      while(1) {
+        delay(100);
+      }
+  }
+#endif
+#ifdef MCUFRIEND_KBV_H_  
+  uint16_t identifier = tft.readID();
+  switch(identifier) {
+    case 0x9486: // ILI9486
+      tft.begin(identifier);
       break;
     default:
       Serial.print(F("LCD Unknown ("));
@@ -97,7 +119,6 @@ void setup(void) {
 
   lcd_w = tft.width();
   lcd_h = tft.height();
-  tft.begin();
   
   // Draw in-active region
   drawInactive();
@@ -111,10 +132,10 @@ void setup(void) {
   drawPixels();
   delay(500);
   
-  clearPixels();
+  clearPixels(0);
   drawPixels();
 
-  processTouch(true); // Get some random
+  processTouch(1); // Get some random
   libpet_init(); // Init pet
 }
 
@@ -133,19 +154,19 @@ void petSelectorIn() {
   for (y = 0; y < 32; y++) {
     for (x = 0; x < 4; x++) {
       b = reverse(pgm_read_byte(&(gfx_feedIcon[y][x])));
-      drawTFTraw(b, w + x * 8, h + y, 1);
+      drawTFT(b, w + x * 8, h + y, 1, 0);
 
       b = reverse(pgm_read_byte(&(gfx_flushIcon[y][x])));
-      drawTFTraw(b, (w * 2 + (w * 2)) + x * 8, h + y, 1);
+      drawTFT(b, (w * 2 + (w * 2)) + x * 8, h + y, 1, 0);
 
       b = reverse(pgm_read_byte(&(gfx_healthIcon[y][x])));
-      drawTFTraw(b, (w * 3 + (w * 4)) + x * 8, h + y, 1);
+      drawTFT(b, (w * 3 + (w * 4)) + x * 8, h + y, 1, 0);
 
       b = reverse(pgm_read_byte(&(gfx_zzzIcon[y][x])));
-      drawTFTraw(b, (w * 4 + (w * 6)) + x * 8, h + y, 1);
+      drawTFT(b, (w * 4 + (w * 6)) + x * 8, h + y, 1, 0);
 
       b = pgm_read_byte(&(gfx_ExploreIcon[y][x]));
-      drawTFTraw(b, (w * 5 + (w * 8)) + x * 8, h + y, 1);
+      drawTFT(b, (w * 5 + (w * 8)) + x * 8, h + y, 1, 0);
     }
   }
 }
@@ -159,51 +180,34 @@ void petSelector(int sel) {
     for (x = 0; x < 4; x++) {      
       b = reverse(pgm_read_byte(&(gfx_selectorIcon[y][x])));
 
-      drawTFTinv(b, w + x * 8, h + y, 0);
-      drawTFTinv(b, (w * 2 + (w * 2)) + x * 8, h + y, 0);
-      drawTFTinv(b, (w * 3 + (w * 4)) + x * 8, h + y, 0);
-      drawTFTinv(b, (w * 4 + (w * 6)) + x * 8, h + y, 0);
-      drawTFTinv(b, (w * 5 + (w * 8)) + x * 8, h + y, 0);
+      // Clear Selection (Fixme)
+      drawTFT(b, w + x * 8, h + y, 0, 1);
+      drawTFT(b, (w * 2 + (w * 2)) + x * 8, h + y, 0, 1);
+      drawTFT(b, (w * 3 + (w * 4)) + x * 8, h + y, 0, 1);
+      drawTFT(b, (w * 4 + (w * 6)) + x * 8, h + y, 0, 1);
+      drawTFT(b, (w * 5 + (w * 8)) + x * 8, h + y, 0, 1);
       
-      switch(sel) {
-        case 0:
-          drawTFTraw(b, w + x * 8, h + y, 0);
-          break;
-        case 1:
-          drawTFTraw(b, (w * 2 + (w * 2)) + x * 8, h + y, 0);
-          break;
-        case 2:
-          drawTFTraw(b, (w * 3 + (w * 4)) + x * 8, h + y, 0);
-          break;
-        case 3:
-          drawTFTraw(b, (w * 4 + (w * 6)) + x * 8, h + y, 0);
-          break;
-        case 4:
-          drawTFTraw(b, (w * 5 + (w * 8)) + x * 8, h + y, 0);
-          break;
-      }
+      // Draw Selection
+      drawTFT(b, (w * (sel + 1) + (w * (sel * 2))) + x * 8, h + y, 0, 0);
     }
   }
 }
 
-void drawTFTinv(uint8_t pix, int16_t x, int16_t y, bool e) {
-  //tft.drawPixel(0, 0, tft.color565(10, 12, 6));
-  for (int b = 7; b >= 0; b--) {
-    if(pix & (1 << b)) {
-      tft.drawPixel(x + (7 - b), y, tft.color565(156, 170, 125));
-    } else if(e) {
-      tft.drawPixel(x + (7 - b), y, tft.color565(10, 12, 6));
-    }
+void drawTFT(uint8_t pix, int16_t x, int16_t y, uint8_t e, uint8_t inv) {
+  uint16_t set, unset;
+  if (inv) { // Inverted
+    set   = tft.color565(156, 170, 125);
+    unset = tft.color565(10, 12, 6);
+  } else { // Regular
+    set   = tft.color565(10, 12, 6);
+    unset = tft.color565(156, 170, 125);
   }
-}
-
-void drawTFTraw(uint8_t pix, int16_t x, int16_t y, bool e) {
-  //tft.drawPixel(0, 0, tft.color565(10, 12, 6));
+  
   for (int b = 7; b >= 0; b--) {
     if(pix & (1 << b)) {
-      tft.drawPixel(x + (7 - b), y, tft.color565(10, 12, 6));
+      tft.drawPixel(x + (7 - b), y, set); // set
     } else if(e) {
-      tft.drawPixel(x + (7 - b), y, tft.color565(156, 170, 125));
+      tft.drawPixel(x + (7 - b), y, unset); // unset
     }
   }
 }
@@ -220,8 +224,8 @@ void petButtons() {
   tft.drawCircle(w * 3 + (w * 2), y + h - 8, 6, tft.color565(128, 12, 24));
 }
 
-void processTouch(bool sr) {
-  bool btn_istate[3]; // Instantanious state
+void processTouch(uint8_t sr) {
+  uint8_t btn_istate[3]; // Instantanious state
   int i; // Temp Variable
   int ay = round(lcd_h * T_SELS) + ((T_PIXS + T_PIXG) * 32) + T_BUTP; // Calculate active y
   int bsize = round(lcd_w / 3); // button size
@@ -230,11 +234,10 @@ void processTouch(bool sr) {
   TS_Point p = touch.getPoint(); // Get Touch Point
 #elif defined(_ADAFRUIT_TOUCHSCREEN_H_)
   TSPoint p = touch.getPoint(); // Get Touch Point
-
   pinMode(TOUCH_XM, OUTPUT); // Restore Direction (Shared)
   pinMode(TOUCH_YP, OUTPUT); // Restore Direction (Shared)
-  //pinMode(TOUCH_XP, OUTPUT); // Restore Direction
-  //pinMode(TOUCH_YM, OUTPUT); // Restore Direction
+  pinMode(TOUCH_XP, OUTPUT); // Restore Direction (Shared)
+  pinMode(TOUCH_YM, OUTPUT); // Restore Direction (Shared)
 #endif
 
   /*
@@ -245,22 +248,23 @@ void processTouch(bool sr) {
   */
   p.x = map(p.x, TS_MINX, TS_MAXX, lcd_w, 0); // scale from 0->1023 to tft.width()
   p.y = map(p.y, TS_MINY, TS_MAXY, lcd_h, 0); // scale from 0->1023 to tft.height()
-  btn_istate[0] = false;
-  btn_istate[1] = false;
-  btn_istate[2] = false;
+  btn_istate[0] = 0;
+  btn_istate[1] = 0;
+  btn_istate[2] = 0;
   if (p.z > TS_MINP && p.z < TS_MAXP) { // Pressure check
-    //Serial.print("X = "); Serial.print(p.x);
-    //Serial.print("\tY = "); Serial.print(p.y);
-    //Serial.print("\tPressure = "); Serial.println(p.z);
-
+    /*
+    Serial.print("X = "); Serial.print(p.x);
+    Serial.print("\tY = "); Serial.print(p.y);
+    Serial.print("\tPressure = "); Serial.println(p.z);
+    */
     // Button touch detection
     if (p.y > ay) { // Inside active area
       if (p.x < bsize) { // Button 1
-        btn_istate[0] = true;
+        btn_istate[0] = 1;
       } else if (p.x > bsize && p.x < bsize * 2) { // Button 2
-        btn_istate[1] = true;
+        btn_istate[1] = 1;
       } else if (p.x > bsize * 2 && p.x < bsize * 3) { // Button 3
-        btn_istate[2] = true;
+        btn_istate[2] = 1;
       }
     }
   }
@@ -285,7 +289,7 @@ void processTouch(bool sr) {
               if(tdisp.sel_stat < 0) {
                 tdisp.sel_stat = 2;
               }
-              libpet_display(false);
+              libpet_display(0);
               gfx_render();
             } else {
               tdisp.selector--;
@@ -300,8 +304,8 @@ void processTouch(bool sr) {
           if (btn_cstate[i] && btn_tstate[i] != 0) { // Pressed and not held
             btn_tstate[i] = 0; // Held
             if (tdisp.in_stat) {
-              tdisp.in_stat = false;
-              libpet_display(false);
+              tdisp.in_stat = 0;
+              libpet_display(0);
               gfx_render();
             } else {
               switch(tdisp.selector) {
@@ -315,8 +319,8 @@ void processTouch(bool sr) {
                   if(!pet.state.explore) { // FIXME: allow stats page inside explore game
                     tdisp.overlay = 0;
                     tdisp.offset = 0;
-                    tdisp.in_stat = true;
-                    libpet_display(false);
+                    tdisp.in_stat = 1;
+                    libpet_display(0);
                     gfx_render();
                   }
                   break;
@@ -338,7 +342,7 @@ void processTouch(bool sr) {
               if(tdisp.sel_stat > 2) {
                 tdisp.sel_stat = 0;
               }
-              libpet_display(false);
+              libpet_display(0);
               gfx_render();
             } else {
               tdisp.selector++;
@@ -362,12 +366,12 @@ void libpet_init(){
   pet.waste     = 0;
   pet.age       = 0;
   pet.stage     = 0;
-  pet.state.eat    = false;
-  pet.state.sleep  = false;
-  pet.state.clean  = false;
-  pet.state.stink  = false;
-  pet.state.warn   = false;
-  pet.state.alive  = true;
+  pet.state.eat    = 0;
+  pet.state.sleep  = 0;
+  pet.state.clean  = 0;
+  pet.state.stink  = 0;
+  pet.state.warn   = 0;
+  pet.state.alive  = 1;
 
   // Display state init
   tdisp.selector  = 0; // Select first icon
@@ -400,7 +404,7 @@ void libpet_tick() {
   } else if (pet.state.sleep) {
     pet.energy += 8;       // Regain energy
     if (pet.energy >= 256) {
-      pet.state.sleep = false; // Wake up
+      pet.state.sleep = 0; // Wake up
     }
   } else if(pet.state.alive && !pet.state.sleep) {
     // Random event
@@ -436,30 +440,30 @@ void libpet_tick() {
     pet.energy -= 1;
     pet.age += 2;
     if (pet.energy < FORCE_SLEEP && pet.stage > 0) {
-      pet.state.sleep = true; // Force to sleep
+      pet.state.sleep = 1; // Force to sleep
     }
     // Visual states update
     if (!pet.state.sleep && !pet.state.clean && !pet.state.eat) {
       if (pet.waste >= WASTE_SICK || pet.hunger >= HUNGER_SICK) {
-        pet.state.stink = true;  // Enable stink state
+        pet.state.stink = 1;  // Enable stink state
       } else {
-        pet.state.stink = false; // Disable stink state
+        pet.state.stink = 0; // Disable stink state
       }
       if (pet.energy <= ENERGY_WARNING || pet.hunger >= HUNGER_WARNING || pet.waste >= (WASTE_SICK - WASTE_SICK / 3)) {
-        pet.state.warn = true;   // Enable warn state
+        pet.state.warn = 1;   // Enable warn state
       } else {
-        pet.state.warn = false;  // Disable warn state
+        pet.state.warn = 0;  // Disable warn state
       }
       if (pet.hunger >= HUNGER_DEATH || pet.age >= AGE_DEATH) {
-        pet.state.alive = false; // No longer alive
+        pet.state.alive = 0; // No longer alive
       }
     }
   }
 }
 
 void loop(void) {
-  processTouch(true); // Process Touch Events
-  //libpet_display(false);
+  processTouch(1); // Process Touch Events
+  //libpet_display(0);
   // Process menu
   if(millis() - lastTick > (1000 / T_TICK)) { // If its time for tick
     /*
@@ -482,15 +486,15 @@ void loop(void) {
     lastFrame = millis(); // Record last frame time
     gfx_render();
     
-    processTouch(true);
+    processTouch(1);
     
     // Check if eating
     if(tdisp.oframe == gfx_frames[OVERLAY_EAT] - 1) { // Last frame check
       pet.hunger = 0;
-      pet.state.eat = false; // Stop eating
+      pet.state.eat = 0; // Stop eating
       libpet_tick(); // Execute tick
     }
-    libpet_display(true);
+    libpet_display(1);
   }
   delay(10); // delay 10ms 
 }
@@ -505,8 +509,8 @@ void libpet_eat() {
       pet.rpg.coins -= EAT_ADU_COST; // subtract cost of meal
     }
     tdisp.oframe = 0;
-    pet.state.eat = true;
-    libpet_display(false);
+    pet.state.eat = 1;
+    libpet_display(0);
     gfx_render();
   }
 }
@@ -514,29 +518,29 @@ void libpet_eat() {
 void libpet_sleep() {
   if (pet.energy <= ENABLE_SLEEP && pet.state.alive && !pet.state.eat && !pet.state.clean && pet.stage > 0 && !pet.state.explore) {
     tdisp.oframe = 0;
-    pet.state.sleep = true;
-    libpet_display(true);
+    pet.state.sleep = 1;
+    libpet_display(1);
     gfx_render();
   }
 }
 
 void libpet_clean() {
   if (pet.waste >= ENABLE_CLEAN && !pet.state.clean && pet.state.alive && !pet.state.sleep && !pet.state.eat && pet.stage > 0 && !pet.state.explore) {
-    pet.state.clean = true;
+    pet.state.clean = 1;
     tdisp.oframe = 0;
     //tdisp.overlay = OVERLAY_CLEAN;
     tdisp.offset = 0;
-    libpet_display(false);
+    libpet_display(0);
     gfx_render();
     doShiftTransition(1);
     pet.waste = 0;
-    pet.state.clean = false;
+    pet.state.clean = 0;
     libpet_tick(); // Must tick to catch warning
   }
-  libpet_display(false);
+  libpet_display(0);
 }
 
-void libpet_display(bool increment){
+void libpet_display(uint8_t increment){
   // Increment Frames
   if (increment) {
     if (tdisp.aframe < gfx_frames[tdisp.animation] - 1 && pet.state.alive) {
@@ -618,7 +622,7 @@ void doOffset(int8_t o) {
         if(x - o < 32) {
           setPixel(x, y, getPixel(x - o, y)); // Copy
         } else {
-          setPixel(x, y, false); // Null
+          setPixel(x, y, 0); // Null
         }
       }
     } else if(o > 0) { // Shift Right
@@ -626,7 +630,7 @@ void doOffset(int8_t o) {
         if(x - o >= 0) {
           setPixel(x, y, getPixel(x - o, y)); // Copy
         } else {
-          setPixel(x, y, false); // Null
+          setPixel(x, y, 0); // Null
         }
       }
     }
@@ -656,7 +660,7 @@ void drawPixels() {
   }
 }
 
-void setPixel(int x, int y, bool v) {
+void setPixel(int x, int y, uint8_t v) {
   int px = calculateXByte(x);
   if(v) {
     pixbuf[y][px] |= 1 << (7 - (x - px * 8));
@@ -665,23 +669,19 @@ void setPixel(int x, int y, bool v) {
   }
 }
 
-bool getPixel(int x, int y) {
+uint8_t getPixel(int x, int y) {
   int px = calculateXByte(x);
   return(pixbuf[y][px] & (1 << (7 - (x - px * 8))));
 }
 
-void clearPixels() {
-  for (int y = 0; y < 32; y++) {
-    for (int x = 0; x < 4; x++) {
-      pixbuf[y][x] = 0x00;
-    }
+void clearPixels(uint8_t fill) {
+  char f = 00; // Default Clear
+  if (fill) {
+    f = 0xFF; // Set Fill Chunk
   }
-}
-
-void fillPixels() {
   for (int y = 0; y < 32; y++) {
     for (int x = 0; x < 4; x++) {
-      pixbuf[y][x] = 0xFF;
+      pixbuf[y][x] = f; // Set
     }
   }
 }
@@ -696,7 +696,7 @@ uint8_t reverse(uint8_t b) {
 }
 
 void gfx_render() {
-  clearPixels(); // Clear Pixbuf
+  clearPixels(0); // Clear Pixbuf
   // Load graphics
   if (tdisp.in_stat) {
     drawDisplay(tdisp.sel_stat); // Draw status display screens
@@ -716,15 +716,9 @@ void gfx_render() {
 
 void drawZigzag (int x, int y, int o, int h) {
   for (int yy = y; yy < y + h; yy++) {
-    if (o) {
-        setPixel(x, yy, 1);
-        setPixel(x + 1, yy, 0);
-        o = 0;
-    } else {
-        setPixel(x, yy, 0);
-        setPixel(x + 1, yy, 1);
-        o = 1;
-    }
+    setPixel(x, yy, o);
+    setPixel(x + 1, yy, !o);
+    o = !o;
   }
 }
 
@@ -811,6 +805,7 @@ void drawOverlay(int id, int frame) {
   }
 }
 
+// FIXME
 void drawAnimation(int id, int frame) {
   int xx, yy, px;
   switch(id) {
@@ -980,7 +975,7 @@ void drawProgress (int value, int vmin, int vmax, int y) {
     rectPixels(3, y + 1, p,  3, 1, 1); // Fill in progress bar
 }
 
-void rectPixels(int8_t x, int8_t y, int8_t w, int16_t h, bool value, bool fill) {
+void rectPixels (int8_t x, int8_t y, int8_t w, int16_t h, uint8_t value, uint8_t fill) {
   if (fill) { // Draw one horizonal line per pixel height.
     for(uint8_t i = 0; i < h; i++) {
       linePixels(x, y + i, x + w - 1, y + i, value);
@@ -994,9 +989,9 @@ void rectPixels(int8_t x, int8_t y, int8_t w, int16_t h, bool value, bool fill) 
 }
 
 // Adapted from adafruit GFX library, which is based on Bresenham's line algorithm
-void linePixels(int8_t x0, int8_t y0, int8_t x1, int16_t y1, bool value) {
+void linePixels (int8_t x0, int8_t y0, int8_t x1, int16_t y1, uint8_t value) {
   int8_t dx, dy, err, ystep;
-  bool steep = abs(y1 - y0) > abs(x1 - x0);
+  uint8_t steep = abs(y1 - y0) > abs(x1 - x0);
   if (steep) {
     // Swap x0 and y0
     err = x0;
@@ -1046,7 +1041,7 @@ void linePixels(int8_t x0, int8_t y0, int8_t x1, int16_t y1, bool value) {
   }
 }
 
-void loadXGlyph35(int dx, int dy, int w, int h, int bb, int xb, int yb) {
+void loadXGlyph35 (int dx, int dy, int w, int h, int bb, int xb, int yb) {
   int xx, yy, b, xc, bc, yc; // Y track, y byte, x byte, begin bit
   for (yy = 0; yy < h; yy++) {
     bc = bb; // current bit = begin bit
@@ -1070,7 +1065,7 @@ void loadXGlyph35(int dx, int dy, int w, int h, int bb, int xb, int yb) {
   }
 }
 
-void loadGlyph35(char c, int x, int y) {
+void loadGlyph35 (char c, int x, int y) {
   int yy, yb, xb, bb, b; // Y track, y byte, x byte, begin bit
   const uint8_t w = 3, h = 5; // 3 Bits wide, 5 bits deep
   switch(c) {
@@ -1236,8 +1231,8 @@ int calculateXByte(int l) {
 void libpet_explore() {
   int8_t l = 0, t, jm, x, y, bx, by, r[EXPLORE_HIDE + pet.rpg.luck][2];
   uint8_t bpb[32][4], bpx; // Back-up pixel buffer and vars
-  bool restore = false; // restore backup pixel buffer
-  bool hide = true, fill = true, gend = false;
+  uint8_t restore = 0; // restore backup pixel buffer
+  uint8_t hide = 1, fill = 1, gend = 0;
   long tt;
   int i, j, fitems = 0;
 
@@ -1252,11 +1247,11 @@ void libpet_explore() {
     return;
   }
 
-  pet.state.explore = true;
+  pet.state.explore = 1;
   pet.rpg.coins -= EXPLORE_COST;
   
-  doRandTransition(1, 8, true); // frameskip 8 seems nice
-  fillPixels(); // Fill real pixel buffer
+  doRandTransition(1, 8, 1); // frameskip 8 seems nice
+  clearPixels(1); // Fill real pixel buffer
   // Set starting co-ordinates
   x = random(0, 32);
   y = random(0, 32);
@@ -1265,7 +1260,7 @@ void libpet_explore() {
 
   for (i = 0; i < 256 && !gend; i++) { // 256 steps
     if (hide) {
-      hide = false;
+      hide = 0;
       // Hide stuff
       //Serial.println("Hide");
       for (j = 0; j < EXPLORE_HIDE + pet.rpg.luck; j++) { // Increase with luck
@@ -1332,7 +1327,7 @@ void libpet_explore() {
         switch(random(0, 65)) {
           case 15: // Battle
             if(!gotBattle()) {
-              gend = true;
+              gend = 1;
             }
             break;
           case 14: // Location
@@ -1351,8 +1346,8 @@ void libpet_explore() {
             }
             gotLevel(explorer_high);
             l = explorer_high;
-            fill = true;
-            hide = true;
+            fill = 1;
+            hide = 1;
             break;
           case 20: // next level entrance
           case 10:
@@ -1362,31 +1357,31 @@ void libpet_explore() {
             gotLevel(++l);
             if(explorer_high < l)
               explorer_high = l;
-            fill = true;
-            hide = true;
+            fill = 1;
+            hide = 1;
             break;
           case 64: // big coins
             // Serial.println("c");
             gotCoins(random(100, (20 * l) + 200)); // Level bonus
-            restore = true;
+            restore = 1;
             break;
           case 32: // medium coins
           case 16:
             // Serial.println("c");
             gotCoins(random(20, (10 * l) + 100)); // Level bonus
-            restore = true;
+            restore = 1;
             break;
           default: // small coins
             gotCoins(random(1, (10 * l) + 10)); // Level bonus
-            restore = true; // restore pixel buffer
+            restore = 1; // restore pixel buffer
         }
       }
     }
     if (fill) { // Fill screen and backup
-      fill = false;
+      fill = 0;
       
       if (!tdisp.in_stat) {
-        fillPixels();
+        clearPixels(1);
         setPixel(x, y, 0);
         drawPixels();
       }
@@ -1397,7 +1392,7 @@ void libpet_explore() {
       }
     }
     if(restore) {
-      restore = false;
+      restore = 0;
       // backup x, y
       bx = x;
       by = y;
@@ -1413,12 +1408,12 @@ void libpet_explore() {
     drawPixels();
     tt = millis();
     while (millis() - tt < 1000 / (T_FPS * 4)) { // burn time watching touch
-      processTouch(false);
+      processTouch(0);
       delay(10);
     }
   }
-  doRandTransition(0, 8, false); // Exit transition
-  pet.state.explore = false;
+  doRandTransition(0, 8, 0); // Exit transition
+  pet.state.explore = 0;
 }
 
 void gotCoins(int count) {
@@ -1429,7 +1424,7 @@ void gotCoins(int count) {
   // Serial.println(count);
   pet.rpg.coins += count;
   doShiftTransition(random(0, 2));
-  //doRandTransition(0, 64, true); // fast Fadeout with fill
+  //doRandTransition(0, 64, 1); // fast Fadeout with fill
   
   loadGlyph35('C',  6, 2);
   loadGlyph35('o', 10, 2);
@@ -1447,10 +1442,10 @@ void gotCoins(int count) {
   
   long tt = millis();
   while (millis() - tt < 5000 / T_FPS) { // burn time watching touch
-    processTouch(false);
+    processTouch(0);
     delay(10);
   }
-  doRandTransition(1, 64, false); // Fast fade-in without fill
+  doRandTransition(1, 64, 0); // Fast fade-in without fill
 }
 
 void gotLevel(int level) {
@@ -1458,7 +1453,7 @@ void gotLevel(int level) {
   int x, i;
   //Serial.print("Entrance ");
   //Serial.println(level);
-  doRandTransition(0, 64, true); // fast Fadeout with fill
+  doRandTransition(0, 64, 1); // fast Fadeout with fill
   
   loadGlyph35('e', 0, 2);
   loadGlyph35('n', 4, 2);
@@ -1478,17 +1473,17 @@ void gotLevel(int level) {
   drawPixels();
   long tt = millis();
   while (millis() - tt < 5000 / T_FPS) { // burn time watching touch
-    processTouch(false);
+    processTouch(0);
     delay(10);
   }
   getExperience(random(1, 50));
-  doRandTransition(1, 64, false); // Fast fade-in without fill
+  doRandTransition(1, 64, 0); // Fast fade-in without fill
 }
 
 void gotLocation() {
   char snum[5];
   int x, i = 0;
-  doRandTransition(0, 64, true); // Fast fade-out with fill
+  doRandTransition(0, 64, 1); // Fast fade-out with fill
   
   x = random(0, 9);
   switch(x) {
@@ -1550,16 +1545,16 @@ void gotLocation() {
   drawPixels();
   long tt = millis();
   while (millis() - tt < 5000 / T_FPS) { // burn time watching touch
-    processTouch(false);
+    processTouch(0);
     delay(10);
   }
-  doRandTransition(1, 64, false); // Fast fade-in without fill
+  doRandTransition(1, 64, 0); // Fast fade-in without fill
 }
 
 int gotBattle() {
   long tt;
   int hp, hpb, ehp, ehpb, att, def, x, turn = random(0, 2);
-  doRandTransition(0, 64, true); // Fast fade-out with fill
+  doRandTransition(0, 64, 1); // Fast fade-out with fill
   hp = 100; hpb = 100;
   x = random(0, 9);
   switch(x) {
@@ -1598,11 +1593,9 @@ int gotBattle() {
   // delay
   tt = millis();
   while (millis() - tt < 2000 / T_FPS) { // burn time watching touch
-    processTouch(false);
+    processTouch(0);
     delay(10);
   }
-
-  
 
   while (ehp > 0 && hp > 0) {
     
@@ -1670,7 +1663,7 @@ int gotBattle() {
     drawPixels();
     tt = millis();
     while (millis() - tt < 2000 / T_FPS) { // burn time watching touch
-      processTouch(false);
+      processTouch(0);
       delay(10);
     }
   }
@@ -1682,7 +1675,7 @@ int gotBattle() {
   drawPixels();
   delay(250);
   
-  doRandTransition(1, 64, false); // Fast fade-in without fill
+  doRandTransition(1, 64, 0); // Fast fade-in without fill
 
   // Who won?
   if(hp > 0) { // User
@@ -1713,7 +1706,7 @@ void getExperience(int a){
   }
 }
 
-void doShiftTransition(bool lr) {
+void doShiftTransition(uint8_t lr) {
   uint8_t i;
   long tt;
   for (i = 0; i < 32 && !tdisp.in_stat; i++) {
@@ -1725,21 +1718,17 @@ void doShiftTransition(bool lr) {
     drawPixels();
     tt = millis();
     while (millis() - tt < (1000 / 32) / T_FPS) { // burn time watching touch
-      processTouch(false);
+      processTouch(0);
       delay(10);
     }
   }
 }
 
-void doRandTransition(bool v, uint8_t fs, bool fill) {
+void doRandTransition(uint8_t v, uint8_t fs, uint8_t fill) {
   int x, y, z, r = 0;
   int todo = 32 * 32; // total pixels
   if (fill) {
-    if (v) {
-      clearPixels();
-    } else {
-      fillPixels();
-    }
+    clearPixels(!v);
   } else {
     todo = 0; // Reset todo to zero
     for (y = 0; y < 32; y++) {
@@ -1765,15 +1754,11 @@ void doRandTransition(bool v, uint8_t fs, bool fill) {
         r++;
       }
     }
-    processTouch(false);
+    processTouch(0);
     drawPixels();
     delay(1);
   }
   // Catch remaining blocks (fast)
-  if (v) {
-    fillPixels();
-  } else {
-    clearPixels();
-  }
+  clearPixels(v);
   drawPixels();
 }
