@@ -49,7 +49,7 @@
 // Matrix Screen Adjustments
 #define T_SELS  0.12 // Multiplier (12% of screen)
 #define T_SELP  2    // Selector padding (Pixels)
-#define T_PIXS  8    // Pixel size (Pixels)
+#define T_PIXS  6    // Pixel size (Pixels)
 #define T_PIXG  1    // Pixel padding (Pixels)
 #define T_BUTP  5    // Touch controls padding (Pixels)
 
@@ -70,6 +70,8 @@
 #define DISPLAY_STAT1 0
 #define DISPLAY_STAT2 1
 #define DISPLAY_RPG   2
+
+#include "digitalpet_drivers.h"; // After graphics are defined
 
 #if defined(__SAM3X8E__)
     #undef __FlashStringHelper::F(string_literal)

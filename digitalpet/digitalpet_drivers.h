@@ -33,6 +33,8 @@
 #ifdef ILI9486_35LCD
   #define DRIVER_MCUFRIEND_KBV // MCUFriend_kbv Drvier
   #define DEFPIN_MCUFRIEND_KBV // Default Pinout
+
+  #define T_PIXS  8    // Pixel size override (Pixels)
   
   #define DRIVER_ADAFRUIT_TOUCHSCREEN // Adafruit TouchScreen Driver
   // Non-default Pinout

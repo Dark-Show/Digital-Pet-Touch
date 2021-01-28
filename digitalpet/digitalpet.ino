@@ -21,7 +21,6 @@
 #define ILI9486_35LCD     // ILI9486 3.5" Touch Shield [Good]
 //#define ADAFRUIT28LCD     // Adafruit 2.8" Arduino LCD Shield (ILI9341) [Touch needs debugging]
 
-#include "digitalpet_drivers.h"; // After graphics are defined
 #include "digitalpet.h";
 
 void setup(void) {
