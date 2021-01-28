@@ -17,12 +17,11 @@
  */
 
 // LCD Touch Shield Selection (One only)
-//#define KEYESTUDIO28LCD // Keyestudio 2.8" LCD Shield (ILI9328) [Good]
+//#define KEYESTUDIO28LCD   // Keyestudio 2.8" LCD Shield (ILI9328) [Good]
 #define ILI9486_35LCD_UNO // ILI9486 3.5" Touch Shield [Good]
+//#define ADAFRUIT28LCD     // Adafruit 2.8" Arduino LCD Shield (ILI9341) [Touch needs debugging]
 
-//#define ADAFRUIT28LCD // Adafruit 2.8" Arduino LCD Shield (ILI9341) [Touch needs debugging]
-
-#include "digitalpet_drivers.h";    // After graphics are defined
+#include "digitalpet_drivers.h"; // After graphics are defined
 #include "digitalpet.h";
 
 void setup(void) {
@@ -235,9 +234,9 @@ void processTouch(uint8_t sr) {
 #elif defined(_ADAFRUIT_TOUCHSCREEN_H_)
   TSPoint p = touch.getPoint(); // Get Touch Point
   pinMode(TOUCH_XM, OUTPUT); // Restore Direction (Shared)
-  pinMode(TOUCH_YP, OUTPUT); // Restore Direction (Shared)
-  pinMode(TOUCH_XP, OUTPUT); // Restore Direction (Shared)
   pinMode(TOUCH_YM, OUTPUT); // Restore Direction (Shared)
+  pinMode(TOUCH_XP, OUTPUT); // Restore Direction (Shared)
+  pinMode(TOUCH_YP, OUTPUT); // Restore Direction (Shared)
 #endif
 
   /*
@@ -880,31 +879,15 @@ void drawDisplay(int id) {
   
   switch(id) {
     case DISPLAY_STAT1: // Display Hunger
-      loadGlyph35('h',  4, 2);
-      loadGlyph35('u',  8, 2);
-      loadGlyph35('n', 12, 2);
-      loadGlyph35('g', 16, 2);
-      loadGlyph35('e', 20, 2);
-      loadGlyph35('r', 24, 2);
+      drawText35("hunger", 4, 2);
       drawProgress (pet.hunger, 0, HUNGER_DEATH, 9);
-      loadGlyph35('w',  6, 18);
-      loadGlyph35('a', 10, 18);
-      loadGlyph35('s', 14, 18);
-      loadGlyph35('t', 18, 18);
-      loadGlyph35('e', 22, 18);
+      drawText35("waste", 6, 18);
       drawProgress (pet.waste, 0, WASTE_SICK, 25);
       break;
     case DISPLAY_STAT2: // Display Energy
-      loadGlyph35('e',  4, 2);
-      loadGlyph35('n',  8, 2);
-      loadGlyph35('e', 12, 2);
-      loadGlyph35('r', 16, 2);
-      loadGlyph35('g', 20, 2);
-      loadGlyph35('y', 24, 2);
+      drawText35("energy", 4, 2);
       drawProgress (pet.energy, FORCE_SLEEP, 256, 9);
-      loadGlyph35('a', 10, 18);
-      loadGlyph35('g', 14, 18);
-      loadGlyph35('e', 18, 18);
+      drawText35("age", 10, 18);
       // Adjust for each life phase
       if (pet.age < AGE_MOVE) {
         drawProgress (pet.age, 0, AGE_MOVE, 25);
@@ -917,32 +900,23 @@ void drawDisplay(int id) {
       }
       break;
     case DISPLAY_RPG: // Display RPG
-      loadGlyph35('R', 10, 2);
-      loadGlyph35('P', 14, 2);
-      loadGlyph35('G', 18, 2);
-
+      drawText35("RPG", 10, 2);
+      
       // Coins
-      loadGlyph35('5', 2,  8);
+      drawText35("5", 2, 8);
       linePixels(3, 7, 3, 13, 1);
       drawNumber(pet.rpg.coins, 13, 8); // Numeric Reading
 
       // Luck
-      loadGlyph35('L', 2,  15);
-      loadGlyph35('U', 6,  15);
-      loadGlyph35('C', 10, 15);
-      loadGlyph35('K', 14, 15);
+      drawText35("luck", 2, 15);
       drawNumber(pet.rpg.luck, 13, 15); // Numeric Reading
 
       // Attack
-      loadGlyph35('A', 2,  21);
-      loadGlyph35('T', 6,  21);
-      loadGlyph35('T', 10, 21);
+      drawText35("att", 2, 21);
       drawNumber(pet.rpg.attack, 13, 21); // Numeric Reading
 
       // Defense
-      loadGlyph35('D', 2,  27);
-      loadGlyph35('E', 6,  27);
-      loadGlyph35('F', 10, 27);
+      drawText35('def', 2, 27);
       drawNumber(pet.rpg.defense, 13, 27); // Numeric Reading
       break;
   }
@@ -950,7 +924,7 @@ void drawDisplay(int id) {
 
 void drawNumber(int num, int x, int y) {
   char snum[5];
-  int c, i;
+  int c;
   itoa(num, snum, 10); // int to base 10 string
   
   // count digits
@@ -958,9 +932,7 @@ void drawNumber(int num, int x, int y) {
     if(snum[c] == 0x00)
       break;
   }
-  for (i = 0; i < c; i++) {
-    loadGlyph35(snum[i], ((5 - c) * 4) + (i * 4) + x, y); // Draw them aligned right
-  }
+  drawText35(snum, ((5 - c) * 4) + x, y); // Align right
 }
 
 void drawProgress (int value, int vmin, int vmax, int y) {
@@ -1041,7 +1013,7 @@ void linePixels (int8_t x0, int8_t y0, int8_t x1, int16_t y1, uint8_t value) {
   }
 }
 
-void loadXGlyph35 (int dx, int dy, int w, int h, int bb, int xb, int yb) {
+void loadXGlyph (int dx, int dy, int w, int h, int bb, int xb, int yb) {
   int xx, yy, b, xc, bc, yc; // Y track, y byte, x byte, begin bit
   for (yy = 0; yy < h; yy++) {
     bc = bb; // current bit = begin bit
@@ -1065,157 +1037,161 @@ void loadXGlyph35 (int dx, int dy, int w, int h, int bb, int xb, int yb) {
   }
 }
 
-void loadGlyph35 (char c, int x, int y) {
-  int yy, yb, xb, bb, b; // Y track, y byte, x byte, begin bit
+void drawText35 (char *c, int x, int y) {
+  int i = 0, yy, yb, xb, bb, b; // Y track, y byte, x byte, begin bit
   const uint8_t w = 3, h = 5; // 3 Bits wide, 5 bits deep
-  switch(c) {
-    case 'A':
-    case 'a':
-      loadXGlyph35(x, y, 3, 5, 0, 0, 0);
-      break;
-    case 'B':
-    case 'b':
-      loadXGlyph35(x, y, 3, 5, 3, 0, 0);
-      break;
-    case 'C':
-    case 'c':
-      loadXGlyph35(x, y, 3, 5, 6, 0, 0);
-      break;
-    case 'D':
-    case 'd':
-      loadXGlyph35(x, y, 3, 5, 1, 1, 0);
-      break;
-    case 'E':
-    case 'e':
-      loadXGlyph35(x, y, 3, 5, 4, 1, 0);
-      break;
-    case 'F':
-    case 'f':
-      loadXGlyph35(x, y, 3, 5, 7, 1, 0);
-      break;
-    case 'G':
-    case 'g':
-      loadXGlyph35(x, y, 3, 5, 2, 2, 0);
-      break;
-    case 'H':
-    case 'h':
-      loadXGlyph35(x, y, 3, 5, 5, 2, 0);
-      break;
-    case 'I':
-    case 'i':
-      loadXGlyph35(x, y, 3, 5, 0, 3, 0);
-      break;
-    case 'J':
-    case 'j':
-      loadXGlyph35(x, y, 3, 5, 3, 3, 0);
-      break;
-    case 'K':
-    case 'k':
-      loadXGlyph35(x, y, 3, 5, 0, 0, 1);
-      break;
-    case 'L':
-    case 'l':
-      loadXGlyph35(x, y, 3, 5, 3, 0, 1);
-      break;
-    case 'M':
-    case 'm':
-      loadXGlyph35(x, y, 3, 5, 6, 0, 1);
-      break;
-    case 'N':
-    case 'n':
-      loadXGlyph35(x, y, 3, 5, 1, 1, 1);
-      break;
-    case 'O':
-    case 'o':
-      loadXGlyph35(x, y, 3, 5, 4, 1, 1);
-      break;
-    case 'P':
-    case 'p':
-      loadXGlyph35(x, y, 3, 5, 7, 1, 1);
-      break;
-    case 'Q':
-    case 'q':
-      loadXGlyph35(x, y, 3, 5, 2, 2, 1);
-      break;
-    case 'R':
-    case 'r':
-      loadXGlyph35(x, y, 3, 5, 5, 2, 1);
-      break;
-    case 'S':
-    case 's':
-      loadXGlyph35(x, y, 3, 5, 0, 3, 1);
-      break;
-    case 'T':
-    case 't':
-      loadXGlyph35(x, y, 3, 5, 3, 3, 1);
-      break;
-    case 'U':
-    case 'u':
-      loadXGlyph35(x, y, 3, 5, 0, 0, 2);
-      break;
-    case 'V':
-    case 'v':
-      loadXGlyph35(x, y, 3, 5, 3, 0, 2);
-      break;
-    case 'W':
-    case 'w':
-      loadXGlyph35(x, y, 3, 5, 6, 0, 2);
-      break;
-    case 'X':
-    case 'x':
-      loadXGlyph35(x, y, 3, 5, 1, 1, 2);
-      break;
-    case 'Y':
-    case 'y':
-      loadXGlyph35(x, y, 3, 5, 4, 1, 2);
-      break;
-    case 'Z':
-    case 'z':
-      loadXGlyph35(x, y, 3, 5, 7, 1, 2);
-      break;
-    case '0':
-      loadXGlyph35(x, y, 3, 5, 2, 2, 2);
-      break;
-    case '1':
-      loadXGlyph35(x, y, 3, 5, 5, 2, 2);
-      break;
-    case '2':
-      loadXGlyph35(x, y, 3, 5, 0, 3, 2);
-      break;
-    case '3':
-      loadXGlyph35(x, y, 3, 5, 3, 3, 2);
-      break;
-    case '4':
-      loadXGlyph35(x, y, 3, 5, 0, 0, 3);
-      break;
-    case '5':
-      loadXGlyph35(x, y, 3, 5, 3, 0, 3);
-      break;
-    case '6':
-      loadXGlyph35(x, y, 3, 5, 6, 0, 3);
-      break;
-    case '7':
-      loadXGlyph35(x, y, 3, 5, 1, 1, 3);
-      break;
-    case '8':
-      loadXGlyph35(x, y, 3, 5, 4, 1, 3);
-      break;
-    case '9':
-      loadXGlyph35(x, y, 3, 5, 7, 1, 3);
-      break;
-    case '.':
-      loadXGlyph35(x, y, 3, 5, 2, 2, 3);
-      break;
-    case ',':
-      loadXGlyph35(x, y, 3, 5, 5, 2, 3);
-      break;
-    default:
-    case '?':
-      loadXGlyph35(x, y, 3, 5, 0, 3, 3);
-      break;
-    case '!':
-      loadXGlyph35(x, y, 3, 5, 3, 3, 3);
-      break;
+  while (c[i]) { // Until null termination
+    switch(c[i]) {
+      case 'A':
+      case 'a':
+        loadXGlyph(x, y, 3, 5, 0, 0, 0);
+        break;
+      case 'B':
+      case 'b':
+        loadXGlyph(x, y, 3, 5, 3, 0, 0);
+        break;
+      case 'C':
+      case 'c':
+        loadXGlyph(x, y, 3, 5, 6, 0, 0);
+        break;
+      case 'D':
+      case 'd':
+        loadXGlyph(x, y, 3, 5, 1, 1, 0);
+        break;
+      case 'E':
+      case 'e':
+        loadXGlyph(x, y, 3, 5, 4, 1, 0);
+        break;
+      case 'F':
+      case 'f':
+        loadXGlyph(x, y, 3, 5, 7, 1, 0);
+        break;
+      case 'G':
+      case 'g':
+        loadXGlyph(x, y, 3, 5, 2, 2, 0);
+        break;
+      case 'H':
+      case 'h':
+        loadXGlyph(x, y, 3, 5, 5, 2, 0);
+        break;
+      case 'I':
+      case 'i':
+        loadXGlyph(x, y, 3, 5, 0, 3, 0);
+        break;
+      case 'J':
+      case 'j':
+        loadXGlyph(x, y, 3, 5, 3, 3, 0);
+        break;
+      case 'K':
+      case 'k':
+        loadXGlyph(x, y, 3, 5, 0, 0, 1);
+        break;
+      case 'L':
+      case 'l':
+        loadXGlyph(x, y, 3, 5, 3, 0, 1);
+        break;
+      case 'M':
+      case 'm':
+        loadXGlyph(x, y, 3, 5, 6, 0, 1);
+        break;
+      case 'N':
+      case 'n':
+        loadXGlyph(x, y, 3, 5, 1, 1, 1);
+        break;
+      case 'O':
+      case 'o':
+        loadXGlyph(x, y, 3, 5, 4, 1, 1);
+        break;
+      case 'P':
+      case 'p':
+        loadXGlyph(x, y, 3, 5, 7, 1, 1);
+        break;
+      case 'Q':
+      case 'q':
+        loadXGlyph(x, y, 3, 5, 2, 2, 1);
+        break;
+      case 'R':
+      case 'r':
+        loadXGlyph(x, y, 3, 5, 5, 2, 1);
+        break;
+      case 'S':
+      case 's':
+        loadXGlyph(x, y, 3, 5, 0, 3, 1);
+        break;
+      case 'T':
+      case 't':
+        loadXGlyph(x, y, 3, 5, 3, 3, 1);
+        break;
+      case 'U':
+      case 'u':
+        loadXGlyph(x, y, 3, 5, 0, 0, 2);
+        break;
+      case 'V':
+      case 'v':
+        loadXGlyph(x, y, 3, 5, 3, 0, 2);
+        break;
+      case 'W':
+      case 'w':
+        loadXGlyph(x, y, 3, 5, 6, 0, 2);
+        break;
+      case 'X':
+      case 'x':
+        loadXGlyph(x, y, 3, 5, 1, 1, 2);
+        break;
+      case 'Y':
+      case 'y':
+        loadXGlyph(x, y, 3, 5, 4, 1, 2);
+        break;
+      case 'Z':
+      case 'z':
+        loadXGlyph(x, y, 3, 5, 7, 1, 2);
+        break;
+      case '0':
+        loadXGlyph(x, y, 3, 5, 2, 2, 2);
+        break;
+      case '1':
+        loadXGlyph(x, y, 3, 5, 5, 2, 2);
+        break;
+      case '2':
+        loadXGlyph(x, y, 3, 5, 0, 3, 2);
+        break;
+      case '3':
+        loadXGlyph(x, y, 3, 5, 3, 3, 2);
+        break;
+      case '4':
+        loadXGlyph(x, y, 3, 5, 0, 0, 3);
+        break;
+      case '5':
+        loadXGlyph(x, y, 3, 5, 3, 0, 3);
+        break;
+      case '6':
+        loadXGlyph(x, y, 3, 5, 6, 0, 3);
+        break;
+      case '7':
+        loadXGlyph(x, y, 3, 5, 1, 1, 3);
+        break;
+      case '8':
+        loadXGlyph(x, y, 3, 5, 4, 1, 3);
+        break;
+      case '9':
+        loadXGlyph(x, y, 3, 5, 7, 1, 3);
+        break;
+      case '.':
+        loadXGlyph(x, y, 3, 5, 2, 2, 3);
+        break;
+      case ',':
+        loadXGlyph(x, y, 3, 5, 5, 2, 3);
+        break;
+      default:
+      case '?':
+        loadXGlyph(x, y, 3, 5, 0, 3, 3);
+        break;
+      case '!':
+        loadXGlyph(x, y, 3, 5, 3, 3, 3);
+        break;
+    }
+    x += 4; // Increment spacing
+    i++;
   }
 }
 
@@ -1425,18 +1401,8 @@ void gotCoins(int count) {
   pet.rpg.coins += count;
   doShiftTransition(random(0, 2));
   //doRandTransition(0, 64, 1); // fast Fadeout with fill
-  
-  loadGlyph35('C',  6, 2);
-  loadGlyph35('o', 10, 2);
-  loadGlyph35('i', 14, 2);
-  loadGlyph35('n', 18, 2);
-  loadGlyph35('s', 22, 2);
-      
-  loadGlyph35('f',  6, 8);
-  loadGlyph35('o', 10, 8);
-  loadGlyph35('u', 14, 8);
-  loadGlyph35('n', 18, 8);
-  loadGlyph35('d', 22, 8);
+  drawText35("coins", 6, 2); 
+  drawText35("found", 6, 8);
   drawNumber(count, 6, 18);
   drawPixels();
   
@@ -1454,21 +1420,8 @@ void gotLevel(int level) {
   //Serial.print("Entrance ");
   //Serial.println(level);
   doRandTransition(0, 64, 1); // fast Fadeout with fill
-  
-  loadGlyph35('e', 0, 2);
-  loadGlyph35('n', 4, 2);
-  loadGlyph35('t', 8, 2);
-  loadGlyph35('r', 12, 2);
-  loadGlyph35('a', 16, 2);
-  loadGlyph35('n', 20, 2);
-  loadGlyph35('c', 24, 2);
-  loadGlyph35('e', 28, 2);
-
-  loadGlyph35('F',  6, 8);
-  loadGlyph35('o', 10, 8);
-  loadGlyph35('u', 14, 8);
-  loadGlyph35('n', 18, 8);
-  loadGlyph35('d', 22, 8);
+  drawText35("entrance", 0, 2);
+  drawText35("found", 6, 8);      
   drawNumber(level, 6, 18);
   drawPixels();
   long tt = millis();
@@ -1489,56 +1442,32 @@ void gotLocation() {
   switch(x) {
     case 0: // Temple (LUCK)
     case 3: //
-      loadGlyph35('t',  4, 2);
-      loadGlyph35('e',  8, 2);
-      loadGlyph35('m', 12, 2);
-      loadGlyph35('p', 16, 2);
-      loadGlyph35('l', 20, 2);
-      loadGlyph35('e', 24, 2);
+      drawText35("temple", 4, 2);
       i = random(1, 3);
-      
-      loadGlyph35('l',  0, 18);
-      loadGlyph35('u',  4, 18);
-      loadGlyph35('c',  8, 18);
-      loadGlyph35('k', 12, 18);
+      drawText35("luck", 0, 18);
       getExperience(random(1, 100));
       pet.rpg.luck += i;
-      
       break;
     case 1: // GYM (Attack)
     case 2: // GYM (Defense)
-      loadGlyph35('g', 12, 0);
-      loadGlyph35('y', 16, 0);
-      loadGlyph35('m', 20, 0);
+      drawText35("gym", 12, 0);
       i = random(0, 2);
       getExperience(random(1, 100));
       if (x == 0) {
         pet.rpg.attack += i;
-        loadGlyph35('a', 0, 18);
-        loadGlyph35('t', 4, 18);
-        loadGlyph35('t', 8, 18);
+        drawText35("att", 0, 18);
         i = pet.rpg.attack;
       } else {
         pet.rpg.defense += i;
-        loadGlyph35('d', 0, 18);
-        loadGlyph35('e', 4, 18);
-        loadGlyph35('f', 8, 18);
+        drawText35("def", 0, 18);
         i = pet.rpg.defense;
       }
       break;
     default: // Nothing
-      loadGlyph35('r',  6, 2);
-      loadGlyph35('u', 10, 2);
-      loadGlyph35('i', 14, 2);
-      loadGlyph35('n', 18, 2);
-      loadGlyph35('s', 22, 2);
+      drawText35("ruins", 6, 2);
   }
-  loadGlyph35('f',  6, 8);
-  loadGlyph35('o', 10, 8);
-  loadGlyph35('u', 14, 8);
-  loadGlyph35('n', 18, 8);
-  loadGlyph35('d', 22, 8);
-
+  drawText35("found", 6, 8);
+  
   if (x < 4) { // If we are not Ruins
     drawNumber(i, 6, 18);
   }
@@ -1559,35 +1488,19 @@ int gotBattle() {
   x = random(0, 9);
   switch(x) {
     case 0: // DRAGON (HARD)
-      loadGlyph35('d',  4, 2);
-      loadGlyph35('r',  8, 2);
-      loadGlyph35('a', 12, 2);
-      loadGlyph35('g', 16, 2);
-      loadGlyph35('o', 20, 2);
-      loadGlyph35('n', 24, 2);
+      drawText35("dragon", 4, 2);
       ehp = random(50, 200);
       att = random(1, 10);
       def = random(1, 8);
       break;
     default: // Snake (EASY)
-      loadGlyph35('s',  6, 2);
-      loadGlyph35('n', 10, 2);
-      loadGlyph35('a', 14, 2);
-      loadGlyph35('k', 18, 2);
-      loadGlyph35('e', 22, 2);
+      drawText35("snake", 4, 2);
       ehp = random(10, 50);
       att = random(1, 4);
       def = random(1, 3);
   }
   ehpb = ehp;
-  loadGlyph35('a', 1, 8);
-  loadGlyph35('t', 5, 8);
-  loadGlyph35('t', 9, 8);
-  loadGlyph35('a', 13, 8);
-  loadGlyph35('c', 17, 8);
-  loadGlyph35('k', 21, 8);
-  loadGlyph35('e', 25, 8);
-  loadGlyph35('d', 29, 8);
+  drawText35("attacked", 1, 8);
   drawPixels();
 
   // delay
@@ -1628,17 +1541,12 @@ int gotBattle() {
     switch(random(0, 8)) {
       case 0: // miss
       case 4:
-        loadGlyph35('m',  8, 16);
-        loadGlyph35('i', 12, 16);
-        loadGlyph35('s', 16, 16);
-        loadGlyph35('s', 20, 16);
+        drawText35("miss", 8, 16); 
         break;
       case 1: // hit
       case 2:
       case 3:
-        loadGlyph35('h', 10, 16);
-        loadGlyph35('i', 14, 16);
-        loadGlyph35('t', 18, 16);
+        drawText35("hit", 10, 16); 
         if (turn) { // user
           ehp -= abs((pet.rpg.attack + 1) - (def / 2));
         } else { // enemy
@@ -1646,13 +1554,8 @@ int gotBattle() {
         }
         break;
       default: // weak hit
-        loadGlyph35('w', 1, 16);
-        loadGlyph35('e', 5, 16);
-        loadGlyph35('a', 9, 16);
-        loadGlyph35('k', 13, 16);
-        loadGlyph35('h', 21, 16);
-        loadGlyph35('i', 25, 16);
-        loadGlyph35('t', 29, 16);
+        drawText35("weak", 1, 16);
+        drawText35("hit", 21, 16);  
         if (turn) { // user
           ehp -= abs(((pet.rpg.attack + 1) / 2) - (def / 2));
         } else { // enemy
@@ -1756,7 +1659,7 @@ void doRandTransition(uint8_t v, uint8_t fs, uint8_t fill) {
     }
     processTouch(0);
     drawPixels();
-    delay(1);
+    delay(10);
   }
   // Catch remaining blocks (fast)
   clearPixels(v);
