@@ -18,7 +18,7 @@
 
 // LCD Touch Shield Selection (One only)
 //#define KEYESTUDIO28LCD   // Keyestudio 2.8" LCD Shield (ILI9328) [Good]
-#define ILI9486_35LCD_UNO // ILI9486 3.5" Touch Shield [Good]
+#define ILI9486_35LCD     // ILI9486 3.5" Touch Shield [Good]
 //#define ADAFRUIT28LCD     // Adafruit 2.8" Arduino LCD Shield (ILI9341) [Touch needs debugging]
 
 #include "digitalpet_drivers.h"; // After graphics are defined
@@ -916,7 +916,7 @@ void drawDisplay(int id) {
       drawNumber(pet.rpg.attack, 13, 21); // Numeric Reading
 
       // Defense
-      drawText35('def', 2, 27);
+      drawText35("def", 2, 27);
       drawNumber(pet.rpg.defense, 13, 27); // Numeric Reading
       break;
   }
@@ -1659,7 +1659,7 @@ void doRandTransition(uint8_t v, uint8_t fs, uint8_t fill) {
     }
     processTouch(0);
     drawPixels();
-    delay(10);
+    delay(5);
   }
   // Catch remaining blocks (fast)
   clearPixels(v);

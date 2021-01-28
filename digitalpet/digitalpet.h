@@ -49,7 +49,7 @@
 // Matrix Screen Adjustments
 #define T_SELS  0.12 // Multiplier (12% of screen)
 #define T_SELP  2    // Selector padding (Pixels)
-#define T_PIXS  6    // Pixel size (Pixels)
+#define T_PIXS  8    // Pixel size (Pixels)
 #define T_PIXG  1    // Pixel padding (Pixels)
 #define T_BUTP  5    // Touch controls padding (Pixels)
 

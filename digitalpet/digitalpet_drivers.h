@@ -30,7 +30,7 @@
   #define DEFCONF_ADAFRUIT_TOUCHSCREEN   // Default Configuration
 #endif
 
-#ifdef ILI9486_35LCD_UNO
+#ifdef ILI9486_35LCD
   #define DRIVER_MCUFRIEND_KBV // MCUFriend_kbv Drvier
   #define DEFPIN_MCUFRIEND_KBV // Default Pinout
   
@@ -48,7 +48,7 @@
 // Unstable Shields
 //////////////////////////////
 
-#ifdef ADAFRUIT28LCD // Adafruit 2.8" Arduino LCD Shield
+#ifdef ADAFRUIT28LCD // Adafruit 2.8" Arduino LCD Shield [working]
   #define DRIVER_ADAFRUIT_ILI9341   // Adafruit ILI9341 Driver
   #define DEFPIN_ADAFRUIT_ILI9341   // Default Pinout
   
