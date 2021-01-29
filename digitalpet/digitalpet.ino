@@ -80,10 +80,7 @@ void setup(void) {
   
   clearPixels(0);
   drawPixels();
-
-  processTouch(1); // Get some random
-  libpet_init(); // Init pet
-  
+  gotBattle(10);
 }
 
 void drawInactive() {
@@ -171,7 +168,7 @@ void petButtons() {
   tft.drawCircle(w * 3 + (w * 2), y + h - 8, 6, tft.color565(128, 12, 24));
 }
 
-void processTouch(uint8_t sr) {
+void processTouch() {
   uint8_t btn_istate[3]; // Instantanious state
   int i; // Temp Variable
   int ay = round(lcd_h * T_SELS) + ((T_PIXS + T_PIXG) * 32) + T_BUTP; // Calculate active y
@@ -206,6 +203,12 @@ void processTouch(uint8_t sr) {
     */
     // Button touch detection
     if (p.y > ay) { // Inside active area
+
+      // Try to seed
+      if (rseed < 25) {
+        rseed = millis(); // record millis
+      }
+      
       if (p.x < bsize) { // Button 1
         btn_istate[0] = 1;
       } else if (p.x > bsize && p.x < bsize * 2) { // Button 2
@@ -214,9 +217,6 @@ void processTouch(uint8_t sr) {
         btn_istate[2] = 1;
       }
     }
-  }
-  if(sr) {
-    randomSeed(p.x+p.y); // Update random seed often
   }
 #endif
   
@@ -308,6 +308,16 @@ void processTouch(uint8_t sr) {
 
 void libpet_init(){
   // Pet init
+  pet.state.alive  = 1;
+  
+  // Seed check
+  if (!rseeded) {
+    if (rseed < 25) {
+      return;
+    }
+    randomSeed(rseed); // Seed random
+    rseeded = 1; // mark
+  }
   pet.hunger    = 0;
   pet.energy    = 256;
   pet.waste     = 0;
@@ -318,7 +328,6 @@ void libpet_init(){
   pet.state.clean  = 0;
   pet.state.stink  = 0;
   pet.state.warn   = 0;
-  pet.state.alive  = 1;
 
   // Display state init
   tdisp.selector  = 0; // Select first icon
@@ -409,10 +418,16 @@ void libpet_tick() {
 }
 
 void loop(void) {
-  processTouch(1); // Process Touch Events
+  processTouch(); // Process Touch Events
   //libpet_display(0);
   // Process menu
   if(millis() - lastTick > (1000 / T_TICK)) { // If its time for tick
+    if (!rseeded) {
+      libpet_init();
+    } else if (rseeded) {
+      lastTick = millis(); // Record last tick time
+      libpet_tick(); // Execute tick
+    }
     /*
     Serial.print(F("Debug: AGE:"));
     Serial.print(pet.age);
@@ -423,20 +438,19 @@ void loop(void) {
     Serial.print(F(" HUNGER:"));
     Serial.print(pet.hunger);
     Serial.print(F(" WASTE:"));
-    Serial.print(pet.waste);
+    Serial.println(pet.waste);
     */
-    lastTick = millis(); // Record last tick time
-    libpet_tick(); // Execute tick
+    
   }
   // Process frame
   if(millis() - lastFrame > (1000 / T_FPS)) { // If its time for tick
     lastFrame = millis(); // Record last frame time
     gfx_render();
     
-    processTouch(1);
+    processTouch();
     
     // Check if eating
-    if(tdisp.oframe == gfx_frames[OVERLAY_EAT] - 1) { // Last frame check
+    if(pet.state.eat && tdisp.oframe == gfx_frames[OVERLAY_EAT] - 1) { // Last frame check
       pet.hunger = 0;
       pet.state.eat = 0; // Stop eating
       libpet_tick(); // Execute tick
@@ -1252,12 +1266,19 @@ void libpet_explore() {
         // What did we find?
         switch(random(0, 65)) {
           case 15: // Battle
-            if(!gotBattle()) {
+          case 13:
+          case 12:
+          case 11:
+          case  9:
+          case  8:
+          case  5:
+            if(!gotBattle(l)) {
               gend = 1;
             }
             break;
           case 14: // Location
           case  7:
+          case  6:
             // Serial.println("Location");
             gotLocation();
             break;
@@ -1334,7 +1355,7 @@ void libpet_explore() {
     drawPixels();
     tt = millis();
     while (millis() - tt < 1000 / (T_FPS * 4)) { // burn time watching touch
-      processTouch(0);
+      processTouch();
       delay(10);
     }
   }
@@ -1358,7 +1379,7 @@ void gotCoins(int count) {
   
   long tt = millis();
   while (millis() - tt < 5000 / T_FPS) { // burn time watching touch
-    processTouch(0);
+    processTouch();
     delay(10);
   }
   doRandTransition(1, 64, 0); // Fast fade-in without fill
@@ -1376,7 +1397,7 @@ void gotLevel(int level) {
   drawPixels();
   long tt = millis();
   while (millis() - tt < 5000 / T_FPS) { // burn time watching touch
-    processTouch(0);
+    processTouch();
     delay(10);
   }
   getExperience(random(1, 50));
@@ -1424,30 +1445,68 @@ void gotLocation() {
   drawPixels();
   long tt = millis();
   while (millis() - tt < 5000 / T_FPS) { // burn time watching touch
-    processTouch(0);
+    processTouch();
     delay(10);
   }
   doRandTransition(1, 64, 0); // Fast fade-in without fill
 }
 
-int gotBattle() {
-  long tt;
-  int hp, hpb, ehp, ehpb, att, def, x, turn = random(0, 2);
+int gotBattle(int l) {
+  float t, tt, m;
+  int hp, hpb, ehp, ehpb, x, turn = random(0, 2);
+  int att, def, luck;
+  
   doRandTransition(0, 64, 1); // Fast fade-out with fill
   hp = 100; hpb = 100;
-  x = random(0, 9);
+  x = random(0, 10);
   switch(x) {
-    case 0: // DRAGON (HARD)
-      drawText35("dragon", 4, 2);
-      ehp = random(50, 200);
-      att = random(1, 10);
-      def = random(1, 8);
-      break;
+    case 0: // Dragon (VERYHARD)
+      if (l >= 8) {
+        drawText35("dragon", 4, 2);
+        ehp = random(50, 400);
+        att = random(4, 12);
+        def = random(4, 12);
+        luck = random(0, 16);
+        break;
+      }
+    case 1: // Witch / Wizard (HARD)
+      if (l >= 6) {
+        if (random(0, 2)) {
+          drawText35("witch", 6, 2);
+        } else {
+          drawText35("wizard", 4, 2);
+        }
+        ehp = random(50, 200);
+        att = random(4, 10);
+        def = random(4, 8);
+        luck = random(0, 16);
+        break;
+      }
+    case 3:
+    case 4:
+    case 5: // Hawk / Wolf (MEDIUM)
+      if (l >= 4) {
+        if (random(0, 2)) {
+          drawText35("hawk", 8, 2);
+        } else {
+          drawText35("wolf", 8, 2);
+        }
+        ehp = random(50, 200);
+        att = random(1, 6);
+        def = random(2, 5);
+        luck = random(0, 16);
+        break;
+      }
     default: // Snake (EASY)
-      drawText35("snake", 6, 2);
+      if (random(0, 2)) {
+        drawText35("snake", 6, 2);
+      } else {
+        drawText35("mouse", 6, 2);
+      }
       ehp = random(10, 50);
       att = random(1, 4);
       def = random(1, 3);
+      luck = random(0, 16);
   }
   ehpb = ehp;
   drawText35("attacked", 1, 8);
@@ -1456,7 +1515,7 @@ int gotBattle() {
   // delay
   tt = millis();
   while (millis() - tt < 2000 / T_FPS) { // burn time watching touch
-    processTouch(0);
+    processTouch();
     delay(10);
   }
 
@@ -1467,8 +1526,16 @@ int gotBattle() {
     drawProgress(hp,  0,  hpb, 25); // Us
     drawPixels();
     
+    delay(250);
+    tt = millis();
+    while (millis() - tt < 2000 / T_FPS) { // burn time watching touch
+      processTouch();
+      delay(10);
+    }
+    rectPixels(0, 16, 32, 5, 0, 1); // Clear hit/miss
+
+    
     if (turn) { // Player turn
-      turn = 0;
       rectPixels(2, 25, 30, 5, 0, 1); // Clear
       drawProgress(hp,  0,  hpb, 23); // Us
       drawPixels();
@@ -1476,7 +1543,6 @@ int gotBattle() {
       delay(250);
       drawProgress(hp,  0,  hpb, 25); // Us
     } else {
-      turn = 1;
       rectPixels(1, 8, 31, 5, 0, 1); // Clear
       drawProgress(ehp, 0, ehpb, 10);  // Enemy
       drawPixels();
@@ -1484,40 +1550,57 @@ int gotBattle() {
       delay(250);
       drawProgress(ehp, 0, ehpb, 8);  // Enemy
     }
-    drawPixels();
-    delay(250);
-    rectPixels(0, 16, 32, 5, 0, 1); // Clear
     switch(random(0, 8)) {
       case 0: // miss
       case 4:
+        t = 0;
         drawText35("miss", 8, 16); 
         break;
       case 1: // hit
       case 2:
       case 3:
         drawText35("hit", 10, 16); 
-        if (turn) { // user
-          ehp -= abs((pet.rpg.attack + 1) - (def / 2));
-        } else { // enemy
-          hp -= 4*abs(att - (pet.rpg.defense / 2));
-        }
+        m = 1;
+        break;
+      case 7: // crit
+        drawText35("crit", 1, 16);
+        drawText35("hit", 21, 16); 
+        m = 0.33;
         break;
       default: // weak hit
         drawText35("weak", 1, 16);
-        drawText35("hit", 21, 16);  
-        if (turn) { // user
-          ehp -= abs(((pet.rpg.attack + 1) / 2) - (def / 2));
-        } else { // enemy
-          hp -= abs((att / 2) - (pet.rpg.defense / 2));
-        }
+        drawText35("hit", 21, 16);
+        m = 2;
         break;
     }
-    drawPixels();
-    tt = millis();
-    while (millis() - tt < 2000 / T_FPS) { // burn time watching touch
-      processTouch(0);
-      delay(10);
+    if (turn) { // user
+      //ehp -= abs((pet.rpg.attack + 1) - (def / 2));
+      t = ceil(((2 * pet.rpg.level + random(1, pet.rpg.luck)) + (pet.rpg.attack / def)) / m);
+      ehp -= abs(t); // Subtract from enemy HP
+      ///*
+      Serial.print("A:");
+      Serial.println(t);
+      Serial.print("EHP:");
+      Serial.println(ehp);
+      //*/
+    } else { // enemy
+      //hp -= 4*abs(att - (pet.rpg.defense / 2));
+      t = ceil(((2 * pet.rpg.level + random(1, luck)) + (att / pet.rpg.defense)) / m);
+      hp -= abs(t); // Subtract from player HP
+      ///*
+      Serial.print("A:");
+      Serial.println(t);
+      Serial.print("HP:");
+      Serial.println(hp);
+      //*/
     }
+    
+    if (ehp < 0) {
+      ehp = 0;
+    } else if (hp < 0) {
+      hp = 0;
+    }
+    turn = !turn;
   }
 
   rectPixels(1, 8, 31, 5, 0, 1);
@@ -1570,7 +1653,7 @@ void doShiftTransition(uint8_t lr) {
     drawPixels();
     tt = millis();
     while (millis() - tt < (1000 / 32) / T_FPS) { // burn time watching touch
-      processTouch(0);
+      processTouch();
       delay(10);
     }
   }
@@ -1606,7 +1689,7 @@ void doRandTransition(uint8_t v, uint8_t fs, uint8_t fill) {
         r++;
       }
     }
-    processTouch(0);
+    processTouch();
     drawPixels();
     delay(5);
   }

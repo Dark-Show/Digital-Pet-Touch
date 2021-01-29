@@ -17,8 +17,8 @@
  */
 
 // Timing Settings
-//#define T_TICK  16      // Debug
-#define T_TICK  1       // Fast Demo
+#define T_TICK  16      // Debug
+//#define T_TICK  1       // Fast Demo
 //#define T_TICK  0.025   // Release
 #define T_FPS   2   // Frames per second
 
@@ -139,6 +139,8 @@ long lastFrame = 0;
 uint8_t disp[32][4];   // Active pixels
 uint8_t pixbuf[32][4]; // Pixel buffer
 uint8_t explorer_high = 0;
+uint16_t rseed = 0; // Random seed
+uint8_t rseeded = 0; // Are we seeded?
 
 int gfx_frames[16] = {2, 2, 2, 2, 2, 1, 2, 2, 2, 5, 2, 1, 1, 1, 1};
 
