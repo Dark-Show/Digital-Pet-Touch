@@ -28,8 +28,13 @@ void setup(void) {
 #if defined(_ADAFRUIT_TFTLCD_H_) || defined(_TFTLCD_ILI932X_H_) || defined(_TFTLCD_ILI9341_H_) || defined(_TFTLCD_HX8347G_H_) || defined(_TFTLCD_HX8357D_H_)
   tft.reset();
 #endif
-  
+
+#ifdef _ADAFRUIT_ILI9341H_
+  uint16_t identifier = 0x9341;
+#else
   uint16_t identifier = tft.readID();
+#endif
+
   switch(identifier) {
 #ifdef _TFTLCD_ILI932X_H_
     case 0x9325: // ILI9325
@@ -44,23 +49,25 @@ void setup(void) {
 #ifdef _TFTLCD_HX8357D_H_
     case 0x8357: // HX8357D
 #endif
-#if defined(_TFTLCD_ILI932X_H_) || defined(_TFTLCD_ILI9341_H_) || defined(_TFTLCD_HX8347G_H_) || defined(_TFTLCD_HX8357D_H_)
-      tft.begin();
-      break;
-#endif
 #ifdef MCUFRIEND_KBV_H_
     case 0x9486: // ILI9486
 #endif
 #if defined(_ADAFRUIT_TFTLCD_H_) || defined(MCUFRIEND_KBV_H_)
       tft.begin(identifier);
       break;
+#else if defined(_ADAFRUIT_ILI9341H_) || defined(_TFTLCD_ILI932X_H_) || defined(_TFTLCD_ILI9341_H_) || defined(_TFTLCD_HX8347G_H_) || defined(_TFTLCD_HX8357D_H_)
+      tft.begin();
+      break;
 #endif
     default:
+#if !defined(_ADAFRUIT_ILI9341H_)
       Serial.print(F("LCD="));
       Serial.println(identifier, HEX);
       while(1) {
         delay(100);
       }
+#endif
+      break;
   }
 
   lcd_w = tft.width();
@@ -80,7 +87,8 @@ void setup(void) {
   
   clearPixels(0);
   drawPixels();
-  gotBattle(10);
+
+  libpet_init();
 }
 
 void drawInactive() {
@@ -1553,7 +1561,7 @@ int gotBattle(int l) {
     switch(random(0, 8)) {
       case 0: // miss
       case 4:
-        t = 0;
+        m = 9999;
         drawText35("miss", 8, 16); 
         break;
       case 1: // hit
@@ -1577,22 +1585,22 @@ int gotBattle(int l) {
       //ehp -= abs((pet.rpg.attack + 1) - (def / 2));
       t = ceil(((2 * pet.rpg.level + random(1, pet.rpg.luck)) + (pet.rpg.attack / def)) / m);
       ehp -= abs(t); // Subtract from enemy HP
-      ///*
+      /*
       Serial.print("A:");
       Serial.println(t);
       Serial.print("EHP:");
       Serial.println(ehp);
-      //*/
+      */
     } else { // enemy
       //hp -= 4*abs(att - (pet.rpg.defense / 2));
       t = ceil(((2 * pet.rpg.level + random(1, luck)) + (att / pet.rpg.defense)) / m);
       hp -= abs(t); // Subtract from player HP
-      ///*
+      /*
       Serial.print("A:");
       Serial.println(t);
       Serial.print("HP:");
       Serial.println(hp);
-      //*/
+      */
     }
     
     if (ehp < 0) {
