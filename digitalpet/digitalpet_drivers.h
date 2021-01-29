@@ -21,6 +21,9 @@
 //////////////////////////////
 
 #ifdef KEYESTUDIO28LCD // Keyestudio 2.8" LCD Shield Hardware
+  //#define DRIVER_ADAFRUIT_TFTLCD         // Adafruit TFTLCD Driver
+  //#define _TFTLCD_ILI932X_H_             // Define type to save space with adafruit driver
+  
   #define DRIVER_CHOPPED_TFTLCD_ILI932X  // Adafruit Chopped TFTLCD Driver
   #define DEFPIN_ADAFRUIT_TFTLCD         // Default Pinout
   #define DEFCONF_ADAFRUIT_TFTLCD        // Default Configuration
@@ -143,6 +146,11 @@
 #ifdef DRIVER_ADAFRUIT_ILI9341
   #include <Adafruit_ILI9341.h> // Adafruit ILI9341 Driver
   Adafruit_ILI9341 tft = Adafruit_ILI9341(LCD_CS, LCD_DC);
+#endif
+
+#ifdef DRIVER_ADAFRUIT_TFTLCD
+  #include <Adafruit_TFTLCD.h> // Adafruit TFTLCD Driver
+  Adafruit_TFTLCD tft(LCD_CS, LCD_CD, LCD_WR, LCD_RD, LCD_RESET);
 #endif
 
 #ifdef DRIVER_CHOPPED_TFTLCD_ILI932X

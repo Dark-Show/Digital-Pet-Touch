@@ -25,95 +25,43 @@
 
 void setup(void) {
   Serial.begin(115200);
-#ifdef _TFTLCD_ILI932X_H_
+#if defined(_ADAFRUIT_TFTLCD_H_) || defined(_TFTLCD_ILI932X_H_) || defined(_TFTLCD_ILI9341_H_) || defined(_TFTLCD_HX8347G_H_) || defined(_TFTLCD_HX8357D_H_)
   tft.reset();
+#endif
   
   uint16_t identifier = tft.readID();
   switch(identifier) {
+#ifdef _TFTLCD_ILI932X_H_
     case 0x9325: // ILI9325
     case 0x9328: // ILI9328
-      tft.begin();
-      break;
-    default:
-      Serial.print(F("LCD Unknown ("));
-      Serial.print(identifier, HEX);
-      Serial.println(")");
-      
-      while(1) {
-        delay(100);
-      }
-  }
 #endif
 #ifdef _TFTLCD_ILI9341_H_
-  tft.reset();
-  
-  uint16_t identifier = tft.readID();
-  switch(identifier) {
     case 0x9341: // ILI9341
-      tft.begin();
-      break;
-    default:
-      Serial.print(F("LCD Unknown ("));
-      Serial.print(identifier, HEX);
-      Serial.println(")");
-      
-      while(1) {
-        delay(100);
-      }
-  }
 #endif
 #ifdef _TFTLCD_HX8347G_H_
-  tft.reset();
-  
-  uint16_t identifier = tft.readID();
-  switch(identifier) {
     case 0x7575: // HX8347G
-      tft.begin();
-      break;
-    default:
-      Serial.print(F("LCD Unknown ("));
-      Serial.print(identifier, HEX);
-      Serial.println(")");
-      
-      while(1) {
-        delay(100);
-      }
-  }
 #endif
 #ifdef _TFTLCD_HX8357D_H_
-  tft.reset();
-  
-  uint16_t identifier = tft.readID();
-  switch(identifier) {
     case 0x8357: // HX8357D
+#endif
+#if defined(_TFTLCD_ILI932X_H_) || defined(_TFTLCD_ILI9341_H_) || defined(_TFTLCD_HX8347G_H_) || defined(_TFTLCD_HX8357D_H_)
       tft.begin();
       break;
-    default:
-      Serial.print(F("LCD Unknown ("));
-      Serial.print(identifier, HEX);
-      Serial.println(")");
-      
-      while(1) {
-        delay(100);
-      }
-  }
 #endif
-#ifdef MCUFRIEND_KBV_H_  
-  uint16_t identifier = tft.readID();
-  switch(identifier) {
+#ifdef MCUFRIEND_KBV_H_
     case 0x9486: // ILI9486
+#endif
+#if defined(_ADAFRUIT_TFTLCD_H_) || defined(MCUFRIEND_KBV_H_)
       tft.begin(identifier);
       break;
+#endif
     default:
-      Serial.print(F("LCD Unknown ("));
-      Serial.print(identifier, HEX);
-      Serial.println(")");
-      
+      Serial.print(F("LCD="));
+      Serial.println(identifier, HEX);
       while(1) {
         delay(100);
       }
   }
-#endif
 
   lcd_w = tft.width();
   lcd_h = tft.height();

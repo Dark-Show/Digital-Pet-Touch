@@ -41,17 +41,10 @@
 #define WASTE_SICK     256
 
 #define EXPLORE_HIDE    16 // (+luck) Explore fun factor // Medium Return
-//#define EXPLORE_HIDE    8 // (+luck) Explore fun factor // Low Return
+//#define EXPLORE_HIDE     8 // (+luck) Explore fun factor // Low Return
 #define EXPLORE_COST    50 // Explore cost
 #define EAT_ADU_COST     5 // Adult eating cost
 #define COIN_DEFAULT   100 // Default coins for new pets
-
-// Matrix Screen Adjustments
-#define T_SELS  0.12 // Multiplier (12% of screen)
-#define T_SELP  2    // Selector padding (Pixels)
-#define T_PIXS  6    // Pixel size (Pixels)
-#define T_PIXG  1    // Pixel padding (Pixels)
-#define T_BUTP  5    // Touch controls padding (Pixels)
 
 // Animation IDs
 #define IDLE_EGG        0
@@ -70,6 +63,14 @@
 #define DISPLAY_STAT1 0
 #define DISPLAY_STAT2 1
 #define DISPLAY_RPG   2
+
+
+// Matrix Screen Adjustments
+#define T_SELS  0.12 // Multiplier (12% of screen)
+#define T_SELP  2    // Selector padding (Pixels)
+#define T_PIXS  6    // Pixel size (Pixels)
+#define T_PIXG  1    // Pixel padding (Pixels)
+#define T_BUTP  5    // Touch controls padding (Pixels)
 
 #include "digitalpet_drivers.h"; // After graphics are defined
 
