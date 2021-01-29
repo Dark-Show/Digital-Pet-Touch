@@ -124,7 +124,7 @@ void setup(void) {
   // Test Display
   for (int y = 0; y < 32; y++) {
     for (int x = 0; x < 4; x++) {
-      pixbuf[y][x] = 0xFF;
+      pixbuf[y][x] = 0xFF; // Set all pixel high
     }
   }
   drawPixels();
@@ -135,6 +135,7 @@ void setup(void) {
 
   processTouch(1); // Get some random
   libpet_init(); // Init pet
+  
 }
 
 void drawInactive() {
@@ -267,7 +268,7 @@ void processTouch(uint8_t sr) {
     }
   }
   if(sr) {
-    randomSeed(p.x); // Update random seed often
+    randomSeed(p.x+p.y); // Update random seed often
   }
 #endif
   
@@ -708,7 +709,7 @@ void gfx_render() {
     if(tdisp.overlay != OVERLAY_CLEAN)
       doOffset(tdisp.offset);
   }
-  //drawOverlay(OVERLAY_STINK, 0);
+  //drawOverlay(OVERLAY_ZZZ, 0);
   drawPixels(); // Render
 }
 
@@ -721,8 +722,6 @@ void drawZigzag (int x, int y, int o, int h) {
 }
 
 void drawOverlay(int id, int frame) {
-  int x, y;
-
   if (id == OVERLAY_STINK) {
     drawZigzag( 2,  5 - frame, 0, 6); // Left
     drawZigzag( 5,  7 - frame, 1, 6); // Left
@@ -790,82 +789,86 @@ void drawOverlay(int id, int frame) {
     setPixel(22 - frame, 8, 1);
     setPixel(24 - frame, 8, 1);
     setPixel(26 - frame, 8, 1); 
-  } else {
-    for (y = 0; y < 32; y++) {
-      for (x = 0; x < 4; x++) {
-        switch(id) {
-          case OVERLAY_ZZZ: // Overlay Zzz [2 frames]
-            pixbuf[y][x] |= reverse(pgm_read_byte(&(gfx_overlayZzz[frame][y][x])));
-            break;
-        }
-      }
-    }
+  } else if (id == OVERLAY_ZZZ) {
+    linePixels(23, 4 - frame, 27, 4 - frame, 1);
+    linePixels(23, 8 - frame, 27, 4 - frame, 1);
+    linePixels(23, 8 - frame, 27, 8 - frame, 1);
+
+    linePixels(22, 11 - frame, 25, 11 - frame, 1);
+    linePixels(22, 14 - frame, 25, 11 - frame, 1);
+    linePixels(22, 14 - frame, 25, 14 - frame, 1);
+
+    linePixels(20, 16 - frame, 22, 16 - frame, 1);
+    setPixel(21, 17 - frame, 1);
+    linePixels(20, 18 - frame, 22, 18 - frame, 1);
+    
+    setPixel(19, 20 - frame, 1);
   }
 }
 
-// FIXME
 void drawAnimation(int id, int frame) {
-  int xx, yy, px;
   switch(id) {
     case IDLE_EGG:
-      for (yy = 0; yy < 12; yy++) {
-        for (xx = 0; xx < 32; xx++) {
-          px = calculateXByte(xx);
-          if (frame == 0) {
-            pixbuf[19 + yy][px] |= reverse(pgm_read_byte(&(gfx_idleEgg[0][yy][px])));
-          } else {
-            pixbuf[19 + yy][px] |= reverse(pgm_read_byte(&(gfx_idleEgg[1][yy][px])));
-          }
-        }
-      }
+      linePixels(10 - frame, 30, 21 + frame, 30, 1); // Bottom Line
+      linePixels(17, 29 + frame, 18, 28 + frame, 1); // Bottom Right
+      linePixels(18, 29 + frame, 20, 27 + frame, 1); // Bottom Right
+      linePixels(19, 29 + frame, 22, 26 + frame, 1); // Bottom Right
+      linePixels(20, 29 + frame, 22, 27 + frame, 1); // Bottom Right
+      linePixels(22, 25 + frame, 22, 23 + frame, 1); // Right Line
+      rectPixels(20, 22 + frame, 2, 2, 1, 0); // Upper Right
+      linePixels(20, 21 + frame, 19, 20 + frame, 1); // Upper Right Line
+      linePixels(11, 29 + frame, 9, 27 + frame, 1); // Bottom Left
+      linePixels(11, 28 + frame, 9, 26 + frame, 1); // Bottom Left
+      linePixels(9, 25 + frame, 9, 24 + frame, 1); // Left Line
+      linePixels(10, 23 + frame, 13, 20 + frame, 1); // Upper Left Line
+      linePixels(10, 22 + frame, 12, 20 + frame, 1); // Upper Left Line
+      linePixels(13, 21 + frame, 14, 20 + frame, 1); // Upper Left Line
+      rectPixels(15, 24 + (frame * 2), 2, 2, 1, 0); // Center Square
+      linePixels(13, 19 + frame, 18, 19 + frame, 1); // Top Line
       break;
     case IDLE_BABY:
-      for (yy = 0; yy < 7; yy++) {
-        for (xx = 0; xx < 32; xx++) {
-          px = calculateXByte(xx);
-          if(frame == 0) {
-            pixbuf[24 + yy][px] |= reverse(pgm_read_byte(&(gfx_idleBaby[0][yy][px])));
-          } else {
-            pixbuf[24 + yy][px] |= reverse(pgm_read_byte(&(gfx_idleBaby[1][yy][px])));
-          }
-        }
+      if (frame == 0) {
+        linePixels(13, 30, 20, 30, 1); // Bottom Line
+        linePixels(14, 29, 19, 29, 1); // Middle Line
+        linePixels(15, 28, 18, 28, 1); // Top Line
+        setPixel(15, 29, 0); // Left Eye
+        setPixel(18, 29, 0); // Right Eye
+      } else {
+        linePixels(15, 29, 18, 29, 1); // Bottom Line
+        linePixels(19, 28, 19, 25, 1); // Right Line
+        linePixels(14, 28, 14, 25, 1); // Left Line
+        linePixels(15, 24, 18, 24, 1); // Top Line
+        linePixels(16, 27, 17, 27, 1); // Mouth Line
+        setPixel(15, 25, 1); // Left Eye
+        setPixel(18, 25, 1); // Right Eye
       }
       break;
     case IDLE_MATURE:
-      for (yy = 0; yy < 10; yy++) {
-        for (xx = 0; xx < 32; xx++) {
-          px = calculateXByte(xx);
-          if(frame == 0) {
-            pixbuf[9 + yy][px] |= reverse(pgm_read_byte(&(gfx_idleMature[0][yy][px])));
-          } else {
-            pixbuf[9 + yy][px] |= reverse(pgm_read_byte(&(gfx_idleMature[1][yy][px])));
-          }
-        }
-      }
+      linePixels(10, 17 + frame, 15, 17 + frame, 1); // Bottom Line
+      setPixel(9, 16 + frame, 1); // Bottom Left Dot
+      setPixel(16, 16 + frame, 1); // Bottom Right Dot
+      linePixels(17, 11 + (frame * 2), 17, 15 + frame, 1); // Right Line
+      linePixels(8, 11 + (frame * 2), 8, 15 + frame, 1); // Left Line
+      linePixels(10, 9 + (frame * 2), 15, 9 + (frame * 2), 1); // Top Line
+      setPixel(9, 10 + (frame * 2), 1); // Upper Left Dot
+      setPixel(16, 10 + (frame * 2), 1); // Upper Right Dot
+      rectPixels(12, 13 + frame, 2, 1 + frame, 1, 0); // Mouth
+      setPixel(11 - frame, 11 + (frame * 2), 1); // Left Eye
+      setPixel(14 + frame, 11 + (frame * 2), 1); // Right Eye
       break;
     case SLEEP_BABY:
-      for (yy = 0; yy < 3; yy++) {
-        for (xx = 0; xx < 32; xx++) {
-          px = calculateXByte(xx);
-          if(frame == 0) {
-            pixbuf[28 + yy][px] |= reverse(pgm_read_byte(&(gfx_sleepBaby[0][yy][px])));
-          } else {
-            pixbuf[28 + yy][px] |= reverse(pgm_read_byte(&(gfx_sleepBaby[1][yy][px])));
-          }
-        }
+      if (frame == 0) {
+        linePixels(15, 28, 18, 28, 1); // Top Line
       }
+      linePixels(13 - frame, 30, 20 + frame, 30, 1); // Bottom Line
+      linePixels(14 - frame, 29, 19 + frame, 29, 1); // Middle Line
       break;
     case SLEEP_MATURE:
-      for (yy = 0; yy < 4; yy++) {
-        for (xx = 0; xx < 32; xx++) {
-          px = calculateXByte(xx);
-          if(frame == 0) {
-            pixbuf[27 + yy][px] |= reverse(pgm_read_byte(&(gfx_sleepMature[0][yy][px])));
-          } else {
-            pixbuf[27 + yy][px] |= reverse(pgm_read_byte(&(gfx_sleepMature[1][yy][px])));
-          }
-        }
-      }
+      linePixels(10 + frame, 28 - frame, 17 - frame, 28 - frame, 1); // Top Line
+      setPixel(9 + frame, 29 - frame, 1); // Left Dot
+      setPixel(18 - frame, 29 - frame, 1); // Right Dot
+      linePixels(8 + frame, 30 - frame, 8 + frame, 30, 1); // Left Line
+      linePixels(19 - frame, 30 - frame, 19 - frame, 30, 1); // Right Line
       break;
   }
 }
@@ -1450,7 +1453,7 @@ void gotLocation() {
     case 1: // GYM (Attack)
     case 2: // GYM (Defense)
       drawText35("gym", 12, 0);
-      i = random(0, 2);
+      i = random(1, 2);
       getExperience(random(1, 100));
       if (x == 0) {
         pet.rpg.attack += i;
@@ -1493,7 +1496,7 @@ int gotBattle() {
       def = random(1, 8);
       break;
     default: // Snake (EASY)
-      drawText35("snake", 4, 2);
+      drawText35("snake", 6, 2);
       ehp = random(10, 50);
       att = random(1, 4);
       def = random(1, 3);
@@ -1510,7 +1513,6 @@ int gotBattle() {
   }
 
   while (ehp > 0 && hp > 0) {
-    
     rectPixels(1, 8, 31, 5, 0, 1);
     drawProgress(ehp, 0, ehpb, 8);  // Enemy
     rectPixels(2, 25, 30, 5, 0, 1);
