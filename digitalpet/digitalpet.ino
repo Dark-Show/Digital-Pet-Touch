@@ -1561,7 +1561,7 @@ int gotBattle(int l) {
     switch(random(0, 8)) {
       case 0: // miss
       case 4:
-        m = 9999;
+        m = 99;
         drawText35("miss", 8, 16); 
         break;
       case 1: // hit
@@ -1581,32 +1581,22 @@ int gotBattle(int l) {
         m = 2;
         break;
     }
-    if (turn) { // user
-      //ehp -= abs((pet.rpg.attack + 1) - (def / 2));
-      t = ceil(((2 * pet.rpg.level + random(1, pet.rpg.luck)) + (pet.rpg.attack / def)) / m);
-      ehp -= abs(t); // Subtract from enemy HP
+    if (turn && m < 99) { // user
+      ehp -= calcDamage(pet.rpg.level, pet.rpg.luck, pet.rpg.attack, def, m); // Subtract from enemy HP
+      if (ehp < 0)
+        ehp = 0;
       /*
-      Serial.print("A:");
-      Serial.println(t);
       Serial.print("EHP:");
       Serial.println(ehp);
       */
-    } else { // enemy
-      //hp -= 4*abs(att - (pet.rpg.defense / 2));
-      t = ceil(((2 * pet.rpg.level + random(1, luck)) + (att / pet.rpg.defense)) / m);
-      hp -= abs(t); // Subtract from player HP
+    } else if (!turn and m < 99) { // enemy
+      hp -= calcDamage(pet.rpg.level, luck, att, pet.rpg.defense, m); // Subtract from player HP
+      if (hp < 0)
+        hp = 0;
       /*
-      Serial.print("A:");
-      Serial.println(t);
       Serial.print("HP:");
       Serial.println(hp);
       */
-    }
-    
-    if (ehp < 0) {
-      ehp = 0;
-    } else if (hp < 0) {
-      hp = 0;
     }
     turn = !turn;
   }
@@ -1634,6 +1624,10 @@ int gotBattle(int l) {
     getExperience(random(1, 10));
     return 0 ;
   }
+}
+
+long calcDamage(int level, int luck, int att, int def, int mod) {
+  return(abs(ceil(((2 * level + random(1, luck)) + (att / def)) / mod)));
 }
 
 void getExperience(int a){
