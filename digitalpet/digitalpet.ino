@@ -326,6 +326,7 @@ void libpet_init(){
     randomSeed(rseed); // Seed random
     rseeded = 1; // mark
   }
+  
   pet.hunger    = 0;
   pet.energy    = 256;
   pet.waste     = 0;
@@ -1432,7 +1433,7 @@ void gotLocation() {
       drawText35("gym", 12, 0);
       i = random(1, 2);
       getExperience(random(1, 100));
-      if (x == 0) {
+      if (x == 1) {
         pet.rpg.attack += i;
         drawText35("att", 0, 18);
         i = pet.rpg.attack;
@@ -1469,7 +1470,7 @@ int gotBattle(int l) {
   x = random(0, 10);
   switch(x) {
     case 0: // Dragon (VERYHARD)
-      if (l >= 8) {
+      if (explorer_high >= 8) { // Level 8 Unlock
         drawText35("dragon", 4, 2);
         ehp = random(50, 400);
         att = random(4, 12);
@@ -1478,7 +1479,7 @@ int gotBattle(int l) {
         break;
       }
     case 1: // Witch / Wizard (HARD)
-      if (l >= 6) {
+      if (explorer_high >= 6) { // Level 6 Unlock
         if (random(0, 2)) {
           drawText35("witch", 6, 2);
         } else {
@@ -1493,7 +1494,7 @@ int gotBattle(int l) {
     case 3:
     case 4:
     case 5: // Hawk / Wolf (MEDIUM)
-      if (l >= 4) {
+      if (explorer_high >= 4) { // Level 4 Unlock
         if (random(0, 2)) {
           drawText35("hawk", 8, 2);
         } else {
@@ -1561,7 +1562,7 @@ int gotBattle(int l) {
     switch(random(0, 8)) {
       case 0: // miss
       case 4:
-        m = 99;
+        m = 0;
         drawText35("miss", 8, 16); 
         break;
       case 1: // hit
@@ -1573,24 +1574,24 @@ int gotBattle(int l) {
       case 7: // crit
         drawText35("crit", 1, 16);
         drawText35("hit", 21, 16); 
-        m = 0.33;
+        m = 3;
         break;
       default: // weak hit
         drawText35("weak", 1, 16);
         drawText35("hit", 21, 16);
-        m = 2;
+        m = 0.5;
         break;
     }
-    if (turn && m < 99) { // user
-      ehp -= calcDamage(pet.rpg.level, pet.rpg.luck, pet.rpg.attack, def, m); // Subtract from enemy HP
+    if (turn) { // user
+      ehp -= calcDamage(pet.rpg.luck, pet.rpg.attack, def, m); // Subtract from enemy HP
       if (ehp < 0)
         ehp = 0;
       /*
       Serial.print("EHP:");
       Serial.println(ehp);
       */
-    } else if (!turn and m < 99) { // enemy
-      hp -= calcDamage(pet.rpg.level, luck, att, pet.rpg.defense, m); // Subtract from player HP
+    } else if (!turn) { // enemy
+      hp -= calcDamage(luck, att, pet.rpg.defense, m); // Subtract from player HP
       if (hp < 0)
         hp = 0;
       /*
@@ -1626,8 +1627,11 @@ int gotBattle(int l) {
   }
 }
 
-long calcDamage(int level, int luck, int att, int def, int mod) {
-  return(abs(ceil(((2 * level + random(1, luck)) + (att / def)) / mod)));
+long calcDamage(int luck, int att, int def, int mod) {
+  int16_t t = (random(1, luck) / def) + att - def;
+  if (t < 0)
+    t = 0;
+  return((t + 1) * mod);
 }
 
 void getExperience(int a){
