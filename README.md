@@ -18,8 +18,17 @@ Based on Python Emulator by ryesalvador: https://gist.github.com/ryesalvador/e88
       * Temple (Luck)
       * Gym (Att / Def)
     * Monster Battles
-      * Snake (EASY)
-      * Dragon (HARD)
+      * Difficulty: Easy
+        * Snake
+        * Mouse
+      * Difficulty: Medium
+        * Hawk
+        * Wolf
+      * Difficulty: Hard
+        * Witch
+        * Wizard
+      * Difficulty: Very Hard
+        * Dragon
     * Simple Experience System
 
 # Tested Displays

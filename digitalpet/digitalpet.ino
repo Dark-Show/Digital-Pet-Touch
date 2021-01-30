@@ -869,6 +869,7 @@ void drawDisplay(int id) {
       drawText35("energy", 4, 2);
       drawProgress (pet.energy, FORCE_SLEEP, 256, 9);
       drawText35("age", 10, 18);
+      ///*
       // Adjust for each life phase
       if (pet.age < AGE_MOVE) {
         drawProgress (pet.age, 0, AGE_MOVE, 25);
@@ -879,6 +880,8 @@ void drawDisplay(int id) {
       } else {
         drawProgress (pet.age, AGE_MATURE, AGE_DEATH, 25);
       }
+      //*/
+      //drawProgress (pet.age, AGE_MATURE, AGE_DEATH, 25);
       break;
     case DISPLAY_RPG: // Display RPG
       drawText35("RPG", 10, 2);
