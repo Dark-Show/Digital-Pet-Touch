@@ -176,6 +176,14 @@ void petButtons() {
   tft.drawCircle(w * 3 + (w * 2), y + h - 8, 6, tft.color565(128, 12, 24));
 }
 
+void loopTouch(int ms) {
+  long tt = millis();
+  while (millis() - tt < ms) { // burn time watching touch
+    processTouch();
+    delay(10);
+  }
+}
+
 void processTouch() {
   uint8_t btn_istate[3]; // Instantanious state
   int i; // Temp Variable
@@ -1318,17 +1326,17 @@ void libpet_explore() {
             break;
           case 64: // big coins
             // Serial.println("c");
-            gotCoins(random(100, (20 * l) + 200)); // Level bonus
+            gotCoins(random(100, (20 * l) + 200), 1, 1); // Level bonus
             restore = 1;
             break;
           case 32: // medium coins
           case 16:
             // Serial.println("c");
-            gotCoins(random(20, (10 * l) + 100)); // Level bonus
+            gotCoins(random(20, (10 * l) + 100), 1, 1); // Level bonus
             restore = 1;
             break;
           default: // small coins
-            gotCoins(random(1, (10 * l) + 10)); // Level bonus
+            gotCoins(random(1, (10 * l) + 10), 1, 1); // Level bonus
             restore = 1; // restore pixel buffer
         }
       }
@@ -1362,36 +1370,31 @@ void libpet_explore() {
     }
 
     drawPixels();
-    tt = millis();
-    while (millis() - tt < 1000 / (T_FPS * 4)) { // burn time watching touch
-      processTouch();
-      delay(10);
-    }
+    loopTouch(1000 / (T_FPS * 4)); // burn time watching touch
   }
   doRandTransition(0, 8, 0); // Exit transition
   pet.state.explore = 0;
 }
 
-void gotCoins(int count) {
+void gotCoins(int count, int ti, int to) {
   char snum[5];
   int x, i;
 
   // Serial.print("Coins: ");
   // Serial.println(count);
   pet.rpg.coins += count;
-  doShiftTransition(random(0, 2));
+  if (ti)
+    doShiftTransition(random(0, 2));
+  else
+    clearPixels(0);
   //doRandTransition(0, 64, 1); // fast Fadeout with fill
   drawText35("coins", 6, 2); 
   drawText35("found", 6, 8);
   drawNumber(count, 6, 18);
   drawPixels();
-  
-  long tt = millis();
-  while (millis() - tt < 5000 / T_FPS) { // burn time watching touch
-    processTouch();
-    delay(10);
-  }
-  doRandTransition(1, 64, 0); // Fast fade-in without fill
+  loopTouch(5000 / T_FPS); // burn time watching touch
+  if (to)
+    doRandTransition(1, 64, 0); // Fast fade-in without fill
 }
 
 void gotLevel(int level) {
@@ -1404,11 +1407,7 @@ void gotLevel(int level) {
   drawText35("found", 6, 8);      
   drawNumber(level, 6, 18);
   drawPixels();
-  long tt = millis();
-  while (millis() - tt < 5000 / T_FPS) { // burn time watching touch
-    processTouch();
-    delay(10);
-  }
+  loopTouch(5000 / T_FPS); // burn time watching touch
   getExperience(random(1, 50));
   doRandTransition(1, 64, 0); // Fast fade-in without fill
 }
@@ -1452,11 +1451,7 @@ void gotLocation() {
     drawNumber(i, 6, 18);
   }
   drawPixels();
-  long tt = millis();
-  while (millis() - tt < 5000 / T_FPS) { // burn time watching touch
-    processTouch();
-    delay(10);
-  }
+  loopTouch(5000 / T_FPS); // burn time watching touch
   doRandTransition(1, 64, 0); // Fast fade-in without fill
 }
 
@@ -1521,12 +1516,7 @@ int gotBattle(int l) {
   drawText35("attacked", 1, 8);
   drawPixels();
 
-  // delay
-  tt = millis();
-  while (millis() - tt < 2000 / T_FPS) { // burn time watching touch
-    processTouch();
-    delay(10);
-  }
+  loopTouch(2000 / T_FPS); // burn time watching touch
 
   while (ehp > 0 && hp > 0) {
     rectPixels(1, 8, 31, 5, 0, 1);
@@ -1536,11 +1526,7 @@ int gotBattle(int l) {
     drawPixels();
     
     delay(250);
-    tt = millis();
-    while (millis() - tt < 2000 / T_FPS) { // burn time watching touch
-      processTouch();
-      delay(10);
-    }
+    loopTouch(2000 / T_FPS); // burn time watching touch
     rectPixels(0, 16, 32, 5, 0, 1); // Clear hit/miss
 
     
@@ -1561,13 +1547,13 @@ int gotBattle(int l) {
     }
     switch(random(0, 8)) {
       case 0: // miss
-      case 4:
         m = 0;
         drawText35("miss", 8, 16); 
         break;
       case 1: // hit
       case 2:
       case 3:
+      case 4:
         drawText35("hit", 10, 16); 
         m = 1;
         break;
@@ -1590,7 +1576,7 @@ int gotBattle(int l) {
       Serial.print("EHP:");
       Serial.println(ehp);
       */
-    } else if (!turn) { // enemy
+    } else { // enemy
       hp -= calcDamage(luck, att, pet.rpg.defense, m); // Subtract from player HP
       if (hp < 0)
         hp = 0;
@@ -1609,33 +1595,37 @@ int gotBattle(int l) {
   drawPixels();
   delay(250);
   
-  doRandTransition(1, 64, 0); // Fast fade-in without fill
-
   // Who won?
   if(hp > 0) { // User
     if(x == 0) {
-      gotCoins(random(100, 100 * att));
+      gotCoins(random(100, 100 * att), 0, 0);
       getExperience(random(25, 50 * att));
     } else {
-      gotCoins(random(1, 25));
+      gotCoins(random(1, 25), 0, 0);
       getExperience(random(25, 50));
     }
+    doRandTransition(1, 64, 0); // Fast fade-in without fill
     return 1;
   } else { // Enemy
     getExperience(random(1, 10));
+    doRandTransition(1, 64, 0); // Fast fade-in without fill
     return 0 ;
   }
 }
 
 long calcDamage(int luck, int att, int def, int mod) {
+  if (!mod)
+    return(0);
   int16_t t = (random(1, luck) / def) + att - def;
   if (t < 0)
     t = 0;
-  return((t + 1) * mod);
+  return((t * mod) + 1);
 }
 
 void getExperience(int a){
   pet.rpg.experience += a;
+  Serial.print("EXP:");
+  Serial.println(pet.rpg.experience);
   while (pet.rpg.experience >= 500) {
     pet.rpg.experience -= 500;
     if(random(0, 2)){ // attack
@@ -1643,7 +1633,6 @@ void getExperience(int a){
     } else {
       pet.rpg.defense++;
     }
-    //Serial.println(pet.rpg.experience);
   }
 }
 
@@ -1657,11 +1646,7 @@ void doShiftTransition(uint8_t lr) {
       doOffset(-1);
     }
     drawPixels();
-    tt = millis();
-    while (millis() - tt < (1000 / 32) / T_FPS) { // burn time watching touch
-      processTouch();
-      delay(10);
-    }
+    loopTouch((1000 / 32) / T_FPS); // burn time watching touch
   }
 }
 
