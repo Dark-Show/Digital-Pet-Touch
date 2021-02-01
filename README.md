@@ -20,7 +20,7 @@ Based on Python Emulator by ryesalvador: https://gist.github.com/ryesalvador/e88
     * Monster Battles
       * Difficulty: Easy
         * Snake
-        * Mouse
+        * Rat
       * Difficulty: Medium
         * Hawk
         * Wolf
@@ -38,12 +38,12 @@ Based on Python Emulator by ryesalvador: https://gist.github.com/ryesalvador/e88
    * Unstable touch input.
 
 # Supported Display Drivers
- * MCUFriend_kbv (ILI9486) [Good]
- * TFTLCD-Chopped (ILI932X) [Good]
- * Adafruit-ILI9341 [Working]
- * TFTLCD-Chopped (ILI9341) [Untested]
- * TFTLCD-Chopped (HX8347G) [Untested]
- * TFTLCD-Chopped (HX8357D) [Untested]
+ * MCUFriend_kbv (ILI9486) [Good] [Link](https://github.com/prenticedavid/MCUFRIEND_kbv)
+ * TFTLCD-Chopped (ILI932X) [Good] [Link](https://github.com/Dark-Show/TFTLCD-Chopped)
+ * Adafruit-ILI9341 [Working] [Link](https://github.com/adafruit/Adafruit_ILI9341)
+ * TFTLCD-Chopped (ILI9341) [Untested] [Link](https://github.com/Dark-Show/TFTLCD-Chopped)
+ * TFTLCD-Chopped (HX8347G) [Untested] [Link](https://github.com/Dark-Show/TFTLCD-Chopped)
+ * TFTLCD-Chopped (HX8357D) [Untested] [Link](https://github.com/Dark-Show/TFTLCD-Chopped)
  
  # Supported Touchscreen Drivers
  * Adafruit TouchScreen [Good]
@@ -53,12 +53,8 @@ Based on Python Emulator by ryesalvador: https://gist.github.com/ryesalvador/e88
 [![Digital Pet Demo](https://img.youtube.com/vi/8PmTnB564RI/0.jpg)](http://www.youtube.com/watch?v=8PmTnB564RI)
 
 # Installation
-
- * Official Libraries (Install from Arduino IDE):
-   * "TouchScreen" by Adafruit
-   * "GFX Library" by Adafruit
-   * "BusIO" by Adafruit
-
- * Custom Libraries (Manual install):
-   * TFTLCD Chopped: [Link](https://github.com/Dark-Show/TFTLCD-Chopped)
+ * Install drivers for your display (See Supported Display Drivers)
+ * Test display with example code to ensure it functions properly
+ * Change selected display at the top of the digitalpet.ino file
+ * Upload to Arduino
 

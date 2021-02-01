@@ -18,8 +18,8 @@
 
 // Timing Settings
 //#define T_TICK  16      // Debug
-#define T_TICK  1       // Fast Demo
-//#define T_TICK  0.025   // Release
+//#define T_TICK  1       // Fast Demo
+#define T_TICK  0.025   // Release
 #define T_FPS   2   // Frames per second
 
 // Gameplay Settings
@@ -90,12 +90,13 @@ struct tama_state {
 };
 
 struct tama_rpg {
-   int8_t attack;
-   int8_t defense;
-   int8_t luck;
-   uint8_t experience;
-   uint8_t level;
-   uint32_t coins;
+   uint8_t attack;
+   uint8_t defense;
+   uint8_t luck;
+   uint16_t experience;
+   uint8_t level;  // Pet RPG Battle Level
+   uint8_t elevel; // Explorer Depth Level
+   uint32_t coins; // Currency
 };
 
 struct tama_pet {
@@ -138,7 +139,6 @@ long lastFrame = 0;
 
 uint8_t disp[32][4];   // Active pixels
 uint8_t pixbuf[32][4]; // Pixel buffer
-uint8_t explorer_high = 0;
 uint16_t rseed = 0; // Random seed
 uint8_t rseeded = 0; // Are we seeded?
 

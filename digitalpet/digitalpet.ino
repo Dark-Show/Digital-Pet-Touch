@@ -83,7 +83,7 @@ void setup(void) {
     }
   }
   drawPixels();
-  delay(500);
+  //delay(500);
   
   clearPixels(0);
   drawPixels();
@@ -221,8 +221,10 @@ void processTouch() {
     if (p.y > ay) { // Inside active area
 
       // Try to seed
-      if (rseed < 25) {
+      if (rseed <= 25) { // seed must be higher then 25ms
         rseed = millis(); // record millis
+        if (rseed > 25)
+          randomSeed(rseed); // Seed random
       }
       
       if (p.x < bsize) { // Button 1
@@ -324,17 +326,6 @@ void processTouch() {
 
 void libpet_init(){
   // Pet init
-  pet.state.alive  = 1;
-  
-  // Seed check
-  if (!rseeded) {
-    if (rseed < 25) {
-      return;
-    }
-    randomSeed(rseed); // Seed random
-    rseeded = 1; // mark
-  }
-  
   pet.hunger    = 0;
   pet.energy    = 256;
   pet.waste     = 0;
@@ -345,6 +336,7 @@ void libpet_init(){
   pet.state.clean  = 0;
   pet.state.stink  = 0;
   pet.state.warn   = 0;
+  pet.state.alive  = 1;
 
   // Display state init
   tdisp.selector  = 0; // Select first icon
@@ -354,7 +346,9 @@ void libpet_init(){
   tdisp.aframe    = 0; // First frame
   tdisp.overlay   = 0; // Disable overlay
   tdisp.oframe    = 0; // Overlay frame
+}
 
+void libpet_rpginit() {
   // RPG stats
   pet.rpg.coins      = COIN_DEFAULT;
   pet.rpg.attack     = random(0, 4);
@@ -362,11 +356,13 @@ void libpet_init(){
   pet.rpg.luck       = random(0, 8);
   pet.rpg.experience = 0;
   pet.rpg.level      = 0;
+  pet.rpg.elevel     = 0;
 }
 void libpet_tick() {
   // Stage Check
   if (pet.stage == 0 && pet.age > AGE_HATCH) {
     pet.stage += 1; // Evolve
+    libpet_rpginit(); // Init RPG system
   } else if (pet.stage == 1 && pet.age > AGE_MATURE) {
     pet.stage += 1; // Evolve
   }
@@ -439,9 +435,7 @@ void loop(void) {
   //libpet_display(0);
   // Process menu
   if(millis() - lastTick > (1000 / T_TICK)) { // If its time for tick
-    if (!rseeded) {
-      libpet_init();
-    } else if (rseeded) {
+    if (rseed > 25) {
       lastTick = millis(); // Record last tick time
       libpet_tick(); // Execute tick
     }
@@ -871,10 +865,8 @@ void drawDisplay(int id) {
       drawText35("age", 10, 18);
       ///*
       // Adjust for each life phase
-      if (pet.age < AGE_MOVE) {
-        drawProgress (pet.age, 0, AGE_MOVE, 25);
-      } else if (pet.age < AGE_HATCH) {
-        drawProgress (pet.age, AGE_MOVE, AGE_HATCH, 25);
+      if (pet.age < AGE_HATCH) {
+        drawProgress (pet.age, 0, AGE_HATCH, 25);
       } else if (pet.age < AGE_MATURE) {
         drawProgress (pet.age, AGE_HATCH, AGE_MATURE, 25);
       } else {
@@ -1280,7 +1272,7 @@ void libpet_explore() {
     // Serial.println("Find");
 
     // Check for find
-    jm = EXPLORE_HIDE + pet.rpg.luck; // Luck can change mid lood
+    jm = EXPLORE_HIDE + pet.rpg.luck; // Luck can change mid loop
     for (j = 0; j < jm; j++) {
       if (x == r[j][0] && y == r[j][1]) { // found something
         // What did we find?
@@ -1308,11 +1300,11 @@ void libpet_explore() {
           case 30:
             // Serial.println("Deep");
             i = 0; // reset steps
-            if (explorer_high == l) {
-              explorer_high++;
+            if (pet.rpg.elevel == l) {
+              pet.rpg.elevel++;
             }
-            gotLevel(explorer_high);
-            l = explorer_high;
+            gotLevel(pet.rpg.elevel);
+            l = pet.rpg.elevel;
             fill = 1;
             hide = 1;
             break;
@@ -1322,8 +1314,8 @@ void libpet_explore() {
             // Serial.println("Level");
             i = 0; // reset steps
             gotLevel(++l);
-            if(explorer_high < l)
-              explorer_high = l;
+            if(pet.rpg.elevel < l)
+              pet.rpg.elevel = l;
             fill = 1;
             hide = 1;
             break;
@@ -1459,7 +1451,7 @@ void gotLocation() {
 }
 
 int gotBattle(int l) {
-  float t, tt, m;
+  float t, m;
   int hp, hpb, ehp, ehpb, x, turn = random(0, 2);
   int att, def, luck;
   
@@ -1468,7 +1460,7 @@ int gotBattle(int l) {
   x = random(0, 10);
   switch(x) {
     case 0: // Dragon (VERYHARD)
-      if (explorer_high >= 8) { // Level 8 Unlock
+      if (pet.rpg.elevel >= 8) { // Level 8 Unlock
         drawText35("dragon", 4, 2);
         ehp = random(50, 400);
         att = random(4, 12);
@@ -1477,13 +1469,13 @@ int gotBattle(int l) {
         break;
       }
     case 1: // Witch / Wizard (HARD)
-      if (explorer_high >= 6) { // Level 6 Unlock
+      if (pet.rpg.elevel >= 6) { // Level 6 Unlock
         if (random(0, 2)) {
           drawText35("witch", 6, 2);
         } else {
           drawText35("wizard", 4, 2);
         }
-        ehp = random(50, 200);
+        ehp = random(50, 300);
         att = random(4, 10);
         def = random(4, 8);
         luck = random(0, 16);
@@ -1492,7 +1484,7 @@ int gotBattle(int l) {
     case 3:
     case 4:
     case 5: // Hawk / Wolf (MEDIUM)
-      if (explorer_high >= 4) { // Level 4 Unlock
+      if (pet.rpg.elevel >= 4) { // Level 4 Unlock
         if (random(0, 2)) {
           drawText35("hawk", 8, 2);
         } else {
@@ -1508,7 +1500,7 @@ int gotBattle(int l) {
       if (random(0, 2)) {
         drawText35("snake", 6, 2);
       } else {
-        drawText35("mouse", 6, 2);
+        drawText35("rat", 10, 2);
       }
       ehp = random(10, 50);
       att = random(1, 4);
@@ -1551,28 +1543,34 @@ int gotBattle(int l) {
     switch(random(0, 8)) {
       case 0: // miss
         m = 0;
-        drawText35("miss", 8, 16); 
+        drawText35("miss", 8, 16);
+        Serial.print("M:");
         break;
       case 1: // hit
       case 2:
       case 3:
       case 4:
-        drawText35("hit", 10, 16); 
+        drawText35("hit", 10, 16);
+        Serial.print("H:"); 
         m = 1;
         break;
       case 7: // crit
         drawText35("crit", 1, 16);
-        drawText35("hit", 21, 16); 
+        drawText35("hit", 21, 16);
+        Serial.print("HC:");
         m = 3;
         break;
       default: // weak hit
         drawText35("weak", 1, 16);
         drawText35("hit", 21, 16);
-        m = 0.5;
+        Serial.print("HW:");
+        m = 0.6;
         break;
     }
     if (turn) { // user
-      ehp -= calcDamage(pet.rpg.luck, pet.rpg.attack, def, m); // Subtract from enemy HP
+      t = calcDamage(pet.rpg.luck, pet.rpg.attack, luck, def, m);
+      Serial.println(t);
+      ehp -= t; // Subtract from enemy HP
       if (ehp < 0)
         ehp = 0;
       /*
@@ -1580,7 +1578,9 @@ int gotBattle(int l) {
       Serial.println(ehp);
       */
     } else { // enemy
-      hp -= calcDamage(luck, att, pet.rpg.defense, m); // Subtract from player HP
+      t = calcDamage(luck, att, pet.rpg.luck, pet.rpg.defense, m);
+      Serial.println(t);
+      hp -= t; // Subtract from player HP
       if (hp < 0)
         hp = 0;
       /*
@@ -1616,10 +1616,11 @@ int gotBattle(int l) {
   }
 }
 
-long calcDamage(int luck, int att, int def, int mod) {
+float calcDamage(int a_luck, int a_att, int d_luck, int d_def, float mod) {
   if (!mod)
     return(0);
-  int16_t t = (random(1, luck) / def) + att - def;
+  //int16_t t = (random(1, a_luck) / _ddef) + a_att - d_def;
+  float t = floor(random(1, a_luck) / (random(1, d_luck) + 1)) + a_att - d_def;
   if (t < 0)
     t = 0;
   return((t * mod) + 1);
@@ -1627,9 +1628,8 @@ long calcDamage(int luck, int att, int def, int mod) {
 
 void getExperience(int a){
   pet.rpg.experience += a;
-  Serial.print("EXP:");
-  Serial.println(pet.rpg.experience);
   while (pet.rpg.experience >= 500) {
+    pet.rpg.level++;
     pet.rpg.experience -= 500;
     if(random(0, 2)){ // attack
       pet.rpg.attack++;
