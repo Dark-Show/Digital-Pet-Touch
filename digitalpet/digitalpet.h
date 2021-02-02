@@ -39,6 +39,7 @@
 
 #define ENABLE_CLEAN    32
 #define WASTE_SICK     256
+#define WASTE_WARNING  170
 
 #define EXPLORE_HIDE    16 // (+luck) Explore fun factor // Medium Return
 //#define EXPLORE_HIDE     8 // (+luck) Explore fun factor // Low Return

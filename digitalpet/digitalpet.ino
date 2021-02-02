@@ -92,17 +92,24 @@ void setup(void) {
 }
 
 void drawInactive() {
-  tft.fillScreen(tft.color565(160, 178, 129)); // (160, 178, 129)
-  petButtons();
-  petSelectorIn();
-  petSelector(0);
-}
-
-void petSelectorIn() {
   uint8_t b;
-  int h = T_SELP;
-  int w = round((lcd_w / 5) / 3.1);
-  int x, y;
+  int w, h, x, y;
+  tft.fillScreen(tft.color565(160, 178, 129)); // Set background color
+  
+  // Draw Touch Buttons
+  y = round(lcd_h * T_SELS) + ((T_PIXS + T_PIXG) * 32) + T_BUTP;
+  h = round((lcd_h - y) / 2);
+  w = round((lcd_w / 3) / 2);
+  tft.fillCircle(w, y + h - 8, 6, tft.color565(200, 33, 44));
+  tft.fillCircle(w * 2 + w, y + h + 2, 6, tft.color565(200, 33, 44));
+  tft.fillCircle(w * 3 + (w * 2), y + h - 8, 6, tft.color565(200, 33, 44)); 
+  tft.drawCircle(w, y + h - 8, 6, tft.color565(128, 12, 24));
+  tft.drawCircle(w * 2 + w, y + h + 2, 6, tft.color565(128, 12, 24));
+  tft.drawCircle(w * 3 + (w * 2), y + h - 8, 6, tft.color565(128, 12, 24));
+  
+  // Setup Top Selector
+  h = T_SELP;
+  w = round((lcd_w / 5) / 3.1);
   for (y = 0; y < 32; y++) {
     for (x = 0; x < 4; x++) {
       b = reverse(pgm_read_byte(&(gfx_feedIcon[y][x])));
@@ -121,6 +128,7 @@ void petSelectorIn() {
       drawTFT(b, (w * 5 + (w * 8)) + x * 8, h + y, 1, 0);
     }
   }
+  petSelector(0); // Place Selector Icon
 }
 
 void petSelector(int sel) {
@@ -132,7 +140,7 @@ void petSelector(int sel) {
     for (x = 0; x < 4; x++) {      
       b = reverse(pgm_read_byte(&(gfx_selectorIcon[y][x])));
 
-      // Clear Selection (Fixme)
+      // Clear Selection (Fixme:only need to clear last selection)
       drawTFT(b, w + x * 8, h + y, 0, 1);
       drawTFT(b, (w * 2 + (w * 2)) + x * 8, h + y, 0, 1);
       drawTFT(b, (w * 3 + (w * 4)) + x * 8, h + y, 0, 1);
@@ -162,18 +170,6 @@ void drawTFT(uint8_t pix, int16_t x, int16_t y, uint8_t e, uint8_t inv) {
       tft.drawPixel(x + (7 - b), y, unset); // unset
     }
   }
-}
-
-void petButtons() {
-  int y = round(lcd_h * T_SELS) + ((T_PIXS + T_PIXG) * 32) + T_BUTP;
-  int h = round((lcd_h - y) / 2);
-  int w = round((lcd_w / 3) / 2);
-  tft.fillCircle(w, y + h - 8, 6, tft.color565(200, 33, 44));
-  tft.fillCircle(w * 2 + w, y + h + 2, 6, tft.color565(200, 33, 44));
-  tft.fillCircle(w * 3 + (w * 2), y + h - 8, 6, tft.color565(200, 33, 44)); 
-  tft.drawCircle(w, y + h - 8, 6, tft.color565(128, 12, 24));
-  tft.drawCircle(w * 2 + w, y + h + 2, 6, tft.color565(128, 12, 24));
-  tft.drawCircle(w * 3 + (w * 2), y + h - 8, 6, tft.color565(128, 12, 24));
 }
 
 void loopTouch(int ms) {
@@ -240,7 +236,7 @@ void processTouch() {
   
   for (i = 0; i < 3; i++) { // Process each button
     if (btn_istate[i] != btn_lstate[i]) {  // if our state has changed
-      btn_tstate[i] = millis();      // refresh statetime
+      btn_tstate[i] = millis(); // refresh statetime
     } else if ((millis() - btn_tstate[i]) > TS_DEBO) { // Else if waited longer than DEBOUNCE
       btn_cstate[i] = btn_istate[i]; // Store instantanious state as current
 
@@ -346,11 +342,13 @@ void libpet_init(){
   tdisp.aframe    = 0; // First frame
   tdisp.overlay   = 0; // Disable overlay
   tdisp.oframe    = 0; // Overlay frame
+
+  pet.rpg.coins   = 0; // RPG Coins
 }
 
 void libpet_rpginit() {
   // RPG stats
-  pet.rpg.coins      = COIN_DEFAULT;
+  pet.rpg.coins      += COIN_DEFAULT;
   pet.rpg.attack     = random(0, 4);
   pet.rpg.defense    = random(0, 4);
   pet.rpg.luck       = random(0, 8);
@@ -358,6 +356,7 @@ void libpet_rpginit() {
   pet.rpg.level      = 0;
   pet.rpg.elevel     = 0;
 }
+
 void libpet_tick() {
   // Stage Check
   if (pet.stage == 0 && pet.age > AGE_HATCH) {
@@ -368,14 +367,12 @@ void libpet_tick() {
   }
   
   // State Check
-  if (pet.state.eat) {
-    pet.hunger = 0;        // Reset hunger
-  } else if (pet.state.sleep) {
+  if (pet.state.sleep) {
     pet.energy += 8;       // Regain energy
     if (pet.energy >= 256) {
       pet.state.sleep = 0; // Wake up
     }
-  } else if(pet.state.alive && !pet.state.sleep) {
+  } else if(pet.state.alive) {
     // Random event
     switch(random(31)) {
       case 4:
@@ -408,23 +405,21 @@ void libpet_tick() {
     }
     pet.energy -= 1;
     pet.age += 2;
+
+    pet.state.stink = 0; // Default stink state
+    pet.state.warn = 0;  // Default warning state
+    
+    // Visual states update
     if (pet.energy < FORCE_SLEEP && pet.stage > 0) {
       pet.state.sleep = 1; // Force to sleep
-    }
-    // Visual states update
-    if (!pet.state.sleep && !pet.state.clean && !pet.state.eat) {
-      if (pet.waste >= WASTE_SICK || pet.hunger >= HUNGER_SICK) {
-        pet.state.stink = 1;  // Enable stink state
-      } else {
-        pet.state.stink = 0; // Disable stink state
-      }
-      if (pet.energy <= ENERGY_WARNING || pet.hunger >= HUNGER_WARNING || pet.waste >= (WASTE_SICK - WASTE_SICK / 3)) {
-        pet.state.warn = 1;   // Enable warn state
-      } else {
-        pet.state.warn = 0;  // Disable warn state
-      }
+      
+    } else if (!pet.state.clean && !pet.state.eat) {
       if (pet.hunger >= HUNGER_DEATH || pet.age >= AGE_DEATH) {
         pet.state.alive = 0; // No longer alive
+      } else if (pet.waste >= WASTE_SICK || pet.hunger >= HUNGER_SICK) {
+        pet.state.stink = 1;  // Enable stink state
+      } else if (pet.energy <= ENERGY_WARNING || pet.hunger >= HUNGER_WARNING || pet.waste >= WASTE_WARNING) {
+        pet.state.warn = 1;   // Enable warn state
       }
     }
   }
@@ -480,6 +475,7 @@ void libpet_eat() {
       }
       pet.rpg.coins -= EAT_ADU_COST; // subtract cost of meal
     }
+    pet.hunger = 0; // Reset hunger
     tdisp.oframe = 0;
     pet.state.eat = 1;
     libpet_display(0);
@@ -1186,7 +1182,7 @@ void libpet_explore() {
   uint8_t restore = 0; // restore backup pixel buffer
   uint8_t hide = 1, fill = 1, gend = 0;
   long tt;
-  int i, j, fitems = 0;
+  int i, j;
 
   // Is pet able?
   if (!pet.state.alive || pet.state.sleep || pet.state.eat || pet.stage == 0 || pet.state.explore) {
@@ -1212,9 +1208,8 @@ void libpet_explore() {
 
   for (i = 0; i < 256 && !gend; i++) { // 256 steps
     if (hide) {
-      hide = 0;
       // Hide stuff
-      //Serial.println("Hide");
+      hide = 0;
       for (j = 0; j < EXPLORE_HIDE + pet.rpg.luck; j++) { // Increase with luck
         r[j][0] = random(0, 32);
         r[j][1] = random(0, 32);
@@ -1225,8 +1220,7 @@ void libpet_explore() {
     // Set backup pixel buffer
     bpx = calculateXByte(x);
     bpb[y][bpx] &= ~(1 << (7 - (x - bpx * 8))); // Set backup
-
-    //Serial.println("Explore");
+    
     // Explore
     do {
       t = random(-8, 9);    
@@ -1268,14 +1262,13 @@ void libpet_explore() {
           break;
       }
     } while (!getPixel(x, y));
-
-    // Serial.println("Find");
-
+    
     // Check for find
     jm = EXPLORE_HIDE + pet.rpg.luck; // Luck can change mid loop
     for (j = 0; j < jm; j++) {
       if (x == r[j][0] && y == r[j][1]) { // found something
         // What did we find?
+        restore = 1; // restore pixel buffer
         switch(random(0, 65)) {
           case 15: // Battle
           case 13:
@@ -1298,41 +1291,33 @@ void libpet_explore() {
           case 50:
           case 40:
           case 30:
-            // Serial.println("Deep");
-            i = 0; // reset steps
-            if (pet.rpg.elevel == l) {
-              pet.rpg.elevel++;
+            if (pet.rpg.elevel < l) {
+              i = 0; // reset steps
+              restore = 0; // Dont restore pixel buffer
+              fill = 1; // Destroy old pixel buffer
+              gotLevel(pet.rpg.elevel);
+              l = pet.rpg.elevel;
+              hide = 1;
+              break;
             }
-            gotLevel(pet.rpg.elevel);
-            l = pet.rpg.elevel;
-            fill = 1;
-            hide = 1;
-            break;
           case 20: // next level entrance
           case 10:
           case  0:
-            // Serial.println("Level");
             i = 0; // reset steps
+            restore = 0; // Dont restore pixel buffer
+            fill = 1; // Destroy old pixel buffer
             gotLevel(++l);
-            if(pet.rpg.elevel < l)
-              pet.rpg.elevel = l;
-            fill = 1;
             hide = 1;
             break;
           case 64: // big coins
-            // Serial.println("c");
             gotCoins(random(100, (20 * l) + 200), 1, 1); // Level bonus
-            restore = 1;
             break;
           case 32: // medium coins
           case 16:
-            // Serial.println("c");
             gotCoins(random(20, (10 * l) + 100), 1, 1); // Level bonus
-            restore = 1;
             break;
           default: // small coins
             gotCoins(random(1, (10 * l) + 10), 1, 1); // Level bonus
-            restore = 1; // restore pixel buffer
         }
       }
     }
@@ -1403,7 +1388,10 @@ void gotLevel(int level) {
   drawNumber(level, 6, 18);
   drawPixels();
   loopTouch(5000 / T_FPS); // burn time watching touch
-  getExperience(random(1, 50));
+  if (pet.rpg.elevel < level) {
+    pet.rpg.elevel = level;
+    getExperience(random(1, 500));
+  }
   doRandTransition(1, 64, 0); // Fast fade-in without fill
 }
 
@@ -1450,13 +1438,15 @@ void gotLocation() {
   doRandTransition(1, 64, 0); // Fast fade-in without fill
 }
 
-int gotBattle(int l) {
+int gotBattle(int lev) {
   float t, m;
   int hp, hpb, ehp, ehpb, x, turn = random(0, 2);
   int att, def, luck;
   
   doRandTransition(0, 64, 1); // Fast fade-out with fill
   hp = 100; hpb = 100;
+  
+  // Random Enemy
   x = random(0, 10);
   switch(x) {
     case 0: // Dragon (VERYHARD)
@@ -1544,49 +1534,35 @@ int gotBattle(int l) {
       case 0: // miss
         m = 0;
         drawText35("miss", 8, 16);
-        Serial.print("M:");
         break;
       case 1: // hit
       case 2:
       case 3:
       case 4:
         drawText35("hit", 10, 16);
-        Serial.print("H:"); 
         m = 1;
         break;
       case 7: // crit
         drawText35("crit", 1, 16);
         drawText35("hit", 21, 16);
-        Serial.print("HC:");
         m = 3;
         break;
       default: // weak hit
         drawText35("weak", 1, 16);
         drawText35("hit", 21, 16);
-        Serial.print("HW:");
         m = 0.6;
         break;
     }
     if (turn) { // user
       t = calcDamage(pet.rpg.luck, pet.rpg.attack, luck, def, m);
-      Serial.println(t);
       ehp -= t; // Subtract from enemy HP
       if (ehp < 0)
         ehp = 0;
-      /*
-      Serial.print("EHP:");
-      Serial.println(ehp);
-      */
     } else { // enemy
       t = calcDamage(luck, att, pet.rpg.luck, pet.rpg.defense, m);
-      Serial.println(t);
       hp -= t; // Subtract from player HP
       if (hp < 0)
         hp = 0;
-      /*
-      Serial.print("HP:");
-      Serial.println(hp);
-      */
     }
     turn = !turn;
   }
@@ -1619,7 +1595,7 @@ int gotBattle(int l) {
 float calcDamage(int a_luck, int a_att, int d_luck, int d_def, float mod) {
   if (!mod)
     return(0);
-  //int16_t t = (random(1, a_luck) / _ddef) + a_att - d_def;
+  //int16_t t = (random(1, a_luck) / d_def) + a_att - d_def;
   float t = floor(random(1, a_luck) / (random(1, d_luck) + 1)) + a_att - d_def;
   if (t < 0)
     t = 0;
