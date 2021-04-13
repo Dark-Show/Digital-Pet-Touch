@@ -76,16 +76,10 @@ void setup(void) {
   // Draw in-active region
   drawInactive();
 
-  // Test Display
-  for (int y = 0; y < 32; y++) {
-    for (int x = 0; x < 4; x++) {
-      pixbuf[y][x] = 0xFF; // Set all pixel high
-    }
-  }
+  // Test Display (Fast)
+  clearPixels(1); // Fill Screen
   drawPixels();
-  //delay(500);
-  
-  clearPixels(0);
+  clearPixels(0); // Clear Screen
   drawPixels();
 
   libpet_init();

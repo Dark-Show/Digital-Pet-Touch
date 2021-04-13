@@ -18,8 +18,8 @@
 
 // Timing Settings
 //#define T_TICK  16      // Debug
-//#define T_TICK  1       // Fast Demo
-#define T_TICK  0.025   // Release
+#define T_TICK  1       // Fast Demo
+//#define T_TICK  0.025   // Release
 #define T_FPS   2   // Frames per second
 
 // Gameplay Settings
